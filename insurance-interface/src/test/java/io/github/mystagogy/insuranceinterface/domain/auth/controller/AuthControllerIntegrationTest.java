@@ -3,6 +3,7 @@ package io.github.mystagogy.insuranceinterface.domain.auth.controller;
 import io.github.mystagogy.insuranceinterface.domain.auth.entity.User;
 import io.github.mystagogy.insuranceinterface.domain.auth.entity.UserRole;
 import io.github.mystagogy.insuranceinterface.domain.auth.repository.UserRepository;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -109,5 +111,51 @@ class AuthControllerIntegrationTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
+    void logoutSuccessReturnsApiResponse() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(
+                post("/api/v1/auth/logout")
+                    .session(session)
+                    .with(csrf())
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.error").value(Matchers.nullValue()));
+    }
+
+    @Test
+    void logoutWithoutCsrfReturnsForbidden() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(
+                post("/api/v1/auth/logout")
+                    .session(session)
+            )
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.message").value("접근 권한이 없습니다."));
+    }
+
+    private MvcResult login(String username, String password) throws Exception {
+        return mockMvc.perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "username": "%s",
+                          "password": "%s"
+                        }
+                        """.formatted(username, password))
+            )
+            .andReturn();
     }
 }

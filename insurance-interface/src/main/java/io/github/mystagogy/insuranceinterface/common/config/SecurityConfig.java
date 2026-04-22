@@ -1,5 +1,7 @@
 package io.github.mystagogy.insuranceinterface.common.config;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
@@ -13,12 +15,16 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.userdetails.UserDetailsService;
 
 @Configuration
 public class SecurityConfig {
@@ -46,7 +52,10 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/v1/auth/login")
+            )
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -60,7 +69,7 @@ public class SecurityConfig {
                 .logoutUrl("/api/v1/auth/logout")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
-                .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpStatus.OK.value()))
+                .logoutSuccessHandler((request, response, authentication) -> writeSuccessResponse(response, HttpStatus.OK))
             )
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) ->
@@ -69,8 +78,16 @@ public class SecurityConfig {
                 .accessDeniedHandler((request, response, accessDeniedException) ->
                     writeErrorResponse(request, response, HttpStatus.FORBIDDEN, "접근 권한이 없습니다.")
                 )
-            );
+            )
+            .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
         return http.build();
+    }
+
+    private void writeSuccessResponse(HttpServletResponse response, HttpStatus status) throws IOException {
+        response.setStatus(status.value());
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("{\"success\":true,\"data\":null,\"error\":null}");
     }
 
     private void writeErrorResponse(
@@ -89,6 +106,22 @@ public class SecurityConfig {
             escapeJson(message)
         );
         response.getWriter().write(body);
+    }
+
+    private static final class CsrfCookieFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+        ) throws ServletException, IOException {
+            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            if (csrfToken != null) {
+                csrfToken.getToken();
+            }
+            filterChain.doFilter(request, response);
+        }
     }
 
     private String escapeJson(String source) {
