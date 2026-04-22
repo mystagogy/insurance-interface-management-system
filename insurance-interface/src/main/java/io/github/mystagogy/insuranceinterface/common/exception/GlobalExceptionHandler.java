@@ -49,6 +49,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.fail(error));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(
+        IllegalArgumentException exception,
+        HttpServletRequest request
+    ) {
+        ErrorResponse error = new ErrorResponse(Instant.now(), request.getRequestURI(), exception.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(error));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception exception, HttpServletRequest request) {
         log.error("Unhandled exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
