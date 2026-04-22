@@ -16,3 +16,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+external:
+  car-insurance-contract:
+    base-url: ${CAR_INSURANCE_CONTRACT_API_BASE_URL:http://apis.data.go.kr/1160100/service/GetFPAtmbInsujoinInfoService}
+    service-key: ${CAR_INSURANCE_API_SERVICE_KEY:}
+    timeout-ms: ${CAR_INSURANCE_CONTRACT_TIMEOUT_MS:5000}
+    num-of-rows: ${CAR_INSURANCE_CONTRACT_NUM_OF_ROWS:300}
