@@ -1,7 +1,5 @@
 package io.github.mystagogy.insuranceinterface.domain.stat.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mystagogy.insuranceinterface.domain.stat.dto.external.CarInsuranceContractExternalItem;
 import io.github.mystagogy.insuranceinterface.domain.stat.entity.GenderType;
 import java.math.BigDecimal;
@@ -13,12 +11,13 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class CarInsuranceContractApiClient {
@@ -193,9 +192,7 @@ public class CarInsuranceContractApiClient {
         handled.add("joinCnt");
         handled.add("insuJoinCnt");
 
-        Iterator<String> fieldNames = itemNode.fieldNames();
-        while (fieldNames.hasNext()) {
-            String fieldName = fieldNames.next();
+        for (String fieldName : itemNode.propertyNames()) {
             if (handled.contains(fieldName)) {
                 continue;
             }

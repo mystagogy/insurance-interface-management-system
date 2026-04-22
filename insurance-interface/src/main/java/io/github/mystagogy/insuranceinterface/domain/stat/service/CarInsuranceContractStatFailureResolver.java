@@ -1,12 +1,12 @@
 package io.github.mystagogy.insuranceinterface.domain.stat.service;
 
 import io.github.mystagogy.insuranceinterface.domain.log.entity.ErrorType;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CarInsuranceContractStatFailureResolver {
+
+    private static final String SAFE_EXTERNAL_ERROR_MESSAGE = "자동차보험 계약정보 외부 API 호출에 실패했습니다.";
 
     /**
      * 예외를 호출 이력과 에러 로그에 저장할 수 있는 실패 정보로 변환한다.
@@ -17,7 +17,7 @@ public class CarInsuranceContractStatFailureResolver {
             resolveMessage(exception),
             "car insurance contract api failed",
             resolveErrorType(exception),
-            stackTrace(exception)
+            null
         );
     }
 
@@ -44,13 +44,10 @@ public class CarInsuranceContractStatFailureResolver {
         if (message == null || message.isBlank()) {
             return "자동차보험 계약정보 조회 처리 중 오류가 발생했습니다.";
         }
-        return message;
-    }
-
-    private String stackTrace(Exception exception) {
-        StringWriter stringWriter = new StringWriter();
-        exception.printStackTrace(new PrintWriter(stringWriter));
-        return stringWriter.toString();
+        if (exception instanceof IllegalArgumentException) {
+            return message;
+        }
+        return SAFE_EXTERNAL_ERROR_MESSAGE;
     }
 
     public record ResolvedFailure(
