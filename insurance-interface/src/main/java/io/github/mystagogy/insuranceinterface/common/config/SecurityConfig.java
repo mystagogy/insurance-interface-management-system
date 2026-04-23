@@ -54,19 +54,19 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .ignoringRequestMatchers("/api/v1/auth/login")
+                .ignoringRequestMatchers("/auth/login")
             )
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/v1/auth/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error")
+                .requestMatchers("/auth/login", "/login", "/login.html", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
             )
             .logout(logout -> logout
-                .logoutUrl("/api/v1/auth/logout")
+                .logoutUrl("/auth/logout")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .logoutSuccessHandler((request, response, authentication) -> writeSuccessResponse(response, HttpStatus.OK))

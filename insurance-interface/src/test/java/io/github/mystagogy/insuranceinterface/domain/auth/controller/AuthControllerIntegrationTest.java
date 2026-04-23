@@ -22,6 +22,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,7 +62,7 @@ class AuthControllerIntegrationTest {
     @Test
     void loginSuccessAndCanGetMyInfo() throws Exception {
         MvcResult loginResult = mockMvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {
@@ -80,7 +81,7 @@ class AuthControllerIntegrationTest {
         assertThat(session).isNotNull();
 
         mockMvc.perform(
-                get("/api/v1/auth/me").session(session)
+                get("/auth/me").session(session)
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -91,7 +92,7 @@ class AuthControllerIntegrationTest {
     @Test
     void loginFailReturnsUnauthorized() throws Exception {
         mockMvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {
@@ -107,10 +108,17 @@ class AuthControllerIntegrationTest {
 
     @Test
     void protectedEndpointRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/api/v1/dashboard/summary"))
+        mockMvc.perform(get("/dashboard/summary"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
+    void loginPageIsPublic() throws Exception {
+        mockMvc.perform(get("/login"))
+            .andExpect(status().isOk())
+            .andExpect(forwardedUrl("/login.html"));
     }
 
     @Test
@@ -120,7 +128,7 @@ class AuthControllerIntegrationTest {
         assertThat(session).isNotNull();
 
         mockMvc.perform(
-                post("/api/v1/auth/logout")
+                post("/auth/logout")
                     .session(session)
                     .with(csrf())
             )
@@ -137,7 +145,7 @@ class AuthControllerIntegrationTest {
         assertThat(session).isNotNull();
 
         mockMvc.perform(
-                post("/api/v1/auth/logout")
+                post("/auth/logout")
                     .session(session)
             )
             .andExpect(status().isForbidden())
@@ -147,7 +155,7 @@ class AuthControllerIntegrationTest {
 
     private MvcResult login(String username, String password) throws Exception {
         return mockMvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {

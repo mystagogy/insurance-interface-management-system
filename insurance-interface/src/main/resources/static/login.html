@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>운영자 로그인</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background: radial-gradient(circle at top, #f3f8ff 0, #e7eef8 35%, #d6dde9 100%);
+            color: #1f2a37;
+        }
+
+        .login-card {
+            width: min(420px, calc(100vw - 32px));
+            padding: 28px;
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #d4dde8;
+            box-shadow: 0 14px 30px rgba(31, 42, 55, 0.12);
+        }
+
+        .title {
+            margin: 0 0 8px;
+            font-size: 1.45rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            margin: 0 0 20px;
+            color: #5f6b7a;
+            font-size: 0.95rem;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        input {
+            border: 1px solid #bcc8d6;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            width: 100%;
+        }
+
+        input:focus {
+            border-color: #2c7be5;
+            box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.16);
+        }
+
+        .message {
+            min-height: 20px;
+            margin-top: 2px;
+            font-size: 0.9rem;
+            color: #b12727;
+        }
+
+        .submit-button {
+            margin-top: 8px;
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            padding: 12px;
+            background: linear-gradient(135deg, #2c7be5, #1a5db9);
+            color: #ffffff;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .submit-button:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+    </style>
+</head>
+<body>
+<main class="login-card">
+    <h1 class="title">운영자 로그인</h1>
+    <p class="subtitle">보험 인터페이스 운영 시스템</p>
+    <form id="loginForm">
+        <div class="field">
+            <label for="username">아이디</label>
+            <input id="username" name="username" type="text" autocomplete="username" required maxlength="50">
+        </div>
+        <div class="field">
+            <label for="password">비밀번호</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="100">
+        </div>
+        <p class="message" id="message"></p>
+        <button class="submit-button" type="submit" id="submitButton">로그인</button>
+    </form>
+</main>
+
+<script>
+    (function () {
+        const loginForm = document.getElementById("loginForm");
+        const submitButton = document.getElementById("submitButton");
+        const messageBox = document.getElementById("message");
+        const redirectUrl = resolveRedirectUrl(new URLSearchParams(window.location.search).get("next"));
+
+        loginForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            messageBox.textContent = "";
+            submitButton.disabled = true;
+
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch("/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({username: username, password: password})
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    messageBox.textContent = payload.error?.message || "로그인에 실패했습니다.";
+                    return;
+                }
+                window.location.replace(redirectUrl);
+            } catch (error) {
+                messageBox.textContent = "로그인 중 오류가 발생했습니다.";
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        function resolveRedirectUrl(next) {
+            if (!next || !next.startsWith("/") || next.startsWith("//")) {
+                return "/swagger-ui/index.html";
+            }
+            return next;
+        }
+    })();
+</script>
+</body>
+</html>
