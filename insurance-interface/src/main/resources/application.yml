@@ -23,3 +23,8 @@ external:
     service-key: ${CAR_INSURANCE_API_SERVICE_KEY:}
     timeout-ms: ${CAR_INSURANCE_CONTRACT_TIMEOUT_MS:5000}
     num-of-rows: ${CAR_INSURANCE_CONTRACT_NUM_OF_ROWS:300}
+  life-insurance:
+    base-url: ${LIFE_INSURANCE_API_BASE_URL:http://apis.data.go.kr/1160100/service/GetFPLifeInsuJoinInfoService}
+    service-key: ${LIFE_INSURANCE_API_SERVICE_KEY:${CAR_INSURANCE_API_SERVICE_KEY:}}
+    timeout-ms: ${LIFE_INSURANCE_TIMEOUT_MS:5000}
+    num-of-rows: ${LIFE_INSURANCE_NUM_OF_ROWS:300}

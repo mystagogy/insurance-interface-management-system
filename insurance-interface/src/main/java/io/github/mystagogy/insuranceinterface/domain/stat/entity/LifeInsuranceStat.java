@@ -22,12 +22,16 @@ import java.time.LocalDate;
 @Table(
     name = "life_insurance_stat",
     indexes = {
-        @Index(name = "idx_life_insurance_stat_stat_date", columnList = "stat_date")
+        @Index(name = "idx_life_insurance_stat_stat_date", columnList = "stat_date"),
+        @Index(
+            name = "idx_life_insurance_stat_search",
+            columnList = "api_id, stat_date, area_name, gender, age_group, insurance_type"
+        )
     },
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_life_insurance_stat_dedup",
-            columnNames = {"stat_date", "age_group", "gender", "insurance_type", "api_id"}
+            columnNames = {"stat_date", "area_name", "age_group", "gender", "insurance_type", "api_id"}
         )
     }
 )
@@ -43,6 +47,9 @@ public class LifeInsuranceStat extends BaseTimeEntity {
 
     @Column(name = "stat_date", nullable = false)
     private LocalDate statDate;
+
+    @Column(name = "area_name", nullable = false, length = 50)
+    private String areaName;
 
     @Column(name = "age_group", nullable = false, length = 30)
     private String ageGroup;
@@ -69,6 +76,7 @@ public class LifeInsuranceStat extends BaseTimeEntity {
     public LifeInsuranceStat(
         ApiInfo apiInfo,
         LocalDate statDate,
+        String areaName,
         String ageGroup,
         GenderType gender,
         String insuranceType,
@@ -78,6 +86,7 @@ public class LifeInsuranceStat extends BaseTimeEntity {
     ) {
         this.apiInfo = apiInfo;
         this.statDate = statDate;
+        this.areaName = areaName;
         this.ageGroup = ageGroup;
         this.gender = gender;
         this.insuranceType = insuranceType;
@@ -96,6 +105,10 @@ public class LifeInsuranceStat extends BaseTimeEntity {
 
     public LocalDate getStatDate() {
         return statDate;
+    }
+
+    public String getAreaName() {
+        return areaName;
     }
 
     public String getAgeGroup() {
