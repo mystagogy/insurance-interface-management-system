@@ -4,18 +4,21 @@ import io.github.mystagogy.insuranceinterface.domain.log.entity.ErrorType;
 import org.springframework.stereotype.Component;
 
 @Component
-public class IndemnityInsuranceStatFailureResolver {
-
-    private static final String SAFE_EXTERNAL_ERROR_MESSAGE = "실손보험 가입정보 외부 API 호출에 실패했습니다.";
+public class StatFailureResolver {
 
     /**
      * 예외를 호출 이력과 에러 로그에 저장할 수 있는 실패 정보로 변환한다.
      */
-    public ResolvedFailure resolve(Exception exception) {
+    public ResolvedFailure resolve(
+        Exception exception,
+        String safeExternalErrorMessage,
+        String fallbackErrorMessage,
+        String responseSummary
+    ) {
         return new ResolvedFailure(
             resolveStatusCode(exception),
-            resolveMessage(exception),
-            "indemnity insurance subscription api failed",
+            resolveMessage(exception, safeExternalErrorMessage, fallbackErrorMessage),
+            responseSummary,
             resolveErrorType(exception),
             null
         );
@@ -39,15 +42,19 @@ public class IndemnityInsuranceStatFailureResolver {
         return ErrorType.UNKNOWN;
     }
 
-    private String resolveMessage(Exception exception) {
+    private String resolveMessage(
+        Exception exception,
+        String safeExternalErrorMessage,
+        String fallbackErrorMessage
+    ) {
         String message = exception.getMessage();
         if (message == null || message.isBlank()) {
-            return "실손보험 가입정보 조회 처리 중 오류가 발생했습니다.";
+            return fallbackErrorMessage;
         }
         if (exception instanceof IllegalArgumentException) {
             return message;
         }
-        return SAFE_EXTERNAL_ERROR_MESSAGE;
+        return safeExternalErrorMessage;
     }
 
     public record ResolvedFailure(

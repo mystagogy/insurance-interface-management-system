@@ -4,7 +4,6 @@ import io.github.mystagogy.insuranceinterface.domain.api.entity.ApiCallHistory;
 import io.github.mystagogy.insuranceinterface.domain.api.entity.ApiInfo;
 import io.github.mystagogy.insuranceinterface.domain.api.repository.ApiInfoRepository;
 import io.github.mystagogy.insuranceinterface.domain.api.service.ApiCallHistoryAuditService;
-import io.github.mystagogy.insuranceinterface.domain.auth.entity.User;
 import io.github.mystagogy.insuranceinterface.domain.auth.repository.UserRepository;
 import io.github.mystagogy.insuranceinterface.domain.stat.client.CarInsuranceContractApiClient;
 import io.github.mystagogy.insuranceinterface.domain.stat.dto.CarInsuranceContractStatItemResponse;
@@ -17,40 +16,36 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-public class CarInsuranceContractStatService {
+public class CarInsuranceContractStatService extends AbstractAuditedStatService {
 
     public static final String API_NAME = "CAR_INSURANCE_CONTRACT";
 
     private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
+    private static final String SAFE_EXTERNAL_ERROR_MESSAGE = "자동차보험 계약정보 외부 API 호출에 실패했습니다.";
+    private static final String FALLBACK_ERROR_MESSAGE = "자동차보험 계약정보 조회 처리 중 오류가 발생했습니다.";
+    private static final String FAILURE_SUMMARY = "car insurance contract api failed";
 
     private final CarInsuranceContractStatRepository carInsuranceContractStatRepository;
-    private final ApiInfoRepository apiInfoRepository;
-    private final ApiCallHistoryAuditService apiCallHistoryAuditService;
     private final CarInsuranceContractApiClient carInsuranceContractApiClient;
-    private final CarInsuranceContractStatFailureResolver failureResolver;
-    private final UserRepository userRepository;
+    private final StatFailureResolver failureResolver;
 
     public CarInsuranceContractStatService(
         CarInsuranceContractStatRepository carInsuranceContractStatRepository,
         ApiInfoRepository apiInfoRepository,
         ApiCallHistoryAuditService apiCallHistoryAuditService,
         CarInsuranceContractApiClient carInsuranceContractApiClient,
-        CarInsuranceContractStatFailureResolver failureResolver,
+        StatFailureResolver failureResolver,
         UserRepository userRepository
     ) {
+        super(apiInfoRepository, apiCallHistoryAuditService, userRepository);
         this.carInsuranceContractStatRepository = carInsuranceContractStatRepository;
-        this.apiInfoRepository = apiInfoRepository;
-        this.apiCallHistoryAuditService = apiCallHistoryAuditService;
         this.carInsuranceContractApiClient = carInsuranceContractApiClient;
         this.failureResolver = failureResolver;
-        this.userRepository = userRepository;
     }
 
     /**
@@ -59,27 +54,17 @@ public class CarInsuranceContractStatService {
      */
     public CarInsuranceContractStatResponse getContractStats(CarInsuranceContractStatQueryRequest request) {
         validatePeriod(request);
-
-        RequestContext context = createRequestContext(request);
-
-        ApiCallHistory history = apiCallHistoryAuditService.createPending(
-            context.apiInfo(),
-            context.requestedBy(),
-            context.requestParams()
+        return executeWithAudit(
+            API_NAME,
+            "자동차보험 계약정보 API 설정을 찾을 수 없습니다.",
+            formatRequestParams(request),
+            "fetched contract statistics",
+            apiInfo -> {
+                synchronizeStats(request, apiInfo);
+                return toResponse(request, loadStats(request.fromYm(), request.toYm()));
+            },
+            this::handleFailure
         );
-
-        try {
-            synchronizeStats(request, context.apiInfo());
-            apiCallHistoryAuditService.recordSuccess(
-                history.getId(),
-                200,
-                "fetched contract statistics"
-            );
-        } catch (Exception exception) {
-            handleFailure(history, context.apiInfo(), exception);
-        }
-
-        return toResponse(request, loadStats(request.fromYm(), request.toYm()));
     }
 
     /**
@@ -102,15 +87,6 @@ public class CarInsuranceContractStatService {
     }
 
     /**
-     * 요청 처리에 필요한 API 설정, 요청 사용자, 로그용 파라미터를 한 번에 구성한다.
-     */
-    private RequestContext createRequestContext(CarInsuranceContractStatQueryRequest request) {
-        ApiInfo apiInfo = apiInfoRepository.findByApiNameAndUseYnTrue(API_NAME)
-            .orElseThrow(() -> new IllegalStateException("자동차보험 계약정보 API 설정을 찾을 수 없습니다."));
-        return new RequestContext(apiInfo, currentUserOrNull(), formatRequestParams(request));
-    }
-
-    /**
      * 외부 API에서 기간 데이터를 조회하고 내부 통계 테이블에 upsert 한다.
      */
     private void synchronizeStats(CarInsuranceContractStatQueryRequest request, ApiInfo apiInfo) {
@@ -122,8 +98,13 @@ public class CarInsuranceContractStatService {
     /**
      * 예외를 운영용 실패 정보로 변환해 호출 이력과 에러 로그를 남긴 뒤 공통 예외로 감싼다.
      */
-    private void handleFailure(ApiCallHistory history, ApiInfo apiInfo, Exception exception) {
-        CarInsuranceContractStatFailureResolver.ResolvedFailure failure = failureResolver.resolve(exception);
+    private RuntimeException handleFailure(ApiCallHistory history, ApiInfo apiInfo, Exception exception) {
+        StatFailureResolver.ResolvedFailure failure = failureResolver.resolve(
+            exception,
+            SAFE_EXTERNAL_ERROR_MESSAGE,
+            FALLBACK_ERROR_MESSAGE,
+            FAILURE_SUMMARY
+        );
         apiCallHistoryAuditService.recordFailure(
             history.getId(),
             apiInfo,
@@ -133,7 +114,7 @@ public class CarInsuranceContractStatService {
             failure.errorType(),
             failure.stackTrace()
         );
-        throw new IllegalStateException("자동차보험 계약정보 조회에 실패했습니다.", exception);
+        return new IllegalStateException("자동차보험 계약정보 조회에 실패했습니다.", exception);
     }
 
     /**
@@ -184,30 +165,10 @@ public class CarInsuranceContractStatService {
     }
 
     /**
-     * 현재 로그인 사용자를 조회하고, 인증 정보가 없으면 null 을 반환한다.
-     */
-    private User currentUserOrNull() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return null;
-        }
-        return userRepository.findByLoginIdAndUseYnTrue(authentication.getName()).orElse(null);
-    }
-
-    /**
      * 호출 이력 저장용 요청 파라미터 문자열을 생성한다.
      */
     private String formatRequestParams(CarInsuranceContractStatQueryRequest request) {
         return "fromYm=" + request.fromYm() + ",toYm=" + request.toYm();
     }
 
-    /**
-     * 외부 응답의 빈 문자열이나 null 을 기본값으로 치환한다.
-     */
-    private String defaultText(String value, String defaultValue) {
-        return value == null || value.isBlank() ? defaultValue : value;
-    }
-
-    private record RequestContext(ApiInfo apiInfo, User requestedBy, String requestParams) {
-    }
 }
