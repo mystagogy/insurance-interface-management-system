@@ -1,14 +1,13 @@
 package io.github.mystagogy.insuranceinterface.domain.stat.client;
 
-import io.github.mystagogy.insuranceinterface.domain.stat.dto.external.CarInsuranceContractExternalItem;
+import io.github.mystagogy.insuranceinterface.domain.stat.dto.external.LifeInsuranceExternalItem;
 import io.github.mystagogy.insuranceinterface.domain.stat.entity.GenderType;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,18 +19,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
-public class CarInsuranceContractApiClient {
-
-    private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
+public class LifeInsuranceApiClient {
 
     private static final Set<String> DIMENSION_FIELDS = Set.of(
-        "isuCmpyOfrYm",
-        "isuItmsNm",
-        "mogClsfNm",
+        "sttsAccmlTrgtYr",
+        "areaNm",
         "sexNm",
+        "rchnAggr",
         "aggr",
-        "atmbPlorNm",
-        "kncrNm"
+        "isuKindNm",
+        "isuItmsNm"
     );
 
     private final WebClient webClient;
@@ -41,13 +38,13 @@ public class CarInsuranceContractApiClient {
     private final int timeoutMs;
     private final int numOfRows;
 
-    public CarInsuranceContractApiClient(
+    public LifeInsuranceApiClient(
         WebClient webClient,
         ObjectMapper objectMapper,
-        @Value("${external.car-insurance-contract.base-url}") String baseUrl,
-        @Value("${external.car-insurance-contract.service-key:}") String serviceKey,
-        @Value("${external.car-insurance-contract.timeout-ms:5000}") int timeoutMs,
-        @Value("${external.car-insurance-contract.num-of-rows:300}") int numOfRows
+        @Value("${external.life-insurance.base-url}") String baseUrl,
+        @Value("${external.life-insurance.service-key:}") String serviceKey,
+        @Value("${external.life-insurance.timeout-ms:5000}") int timeoutMs,
+        @Value("${external.life-insurance.num-of-rows:300}") int numOfRows
     ) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
@@ -57,34 +54,34 @@ public class CarInsuranceContractApiClient {
         this.numOfRows = numOfRows;
     }
 
-    public List<CarInsuranceContractExternalItem> fetch(String fromYm, String toYm) {
+    public List<LifeInsuranceExternalItem> fetch(String fromYear, String toYear) {
         if (serviceKey == null || serviceKey.isBlank()) {
-            throw new IllegalStateException("자동차보험 계약정보 API Decoding service key가 설정되지 않았습니다.");
+            throw new IllegalStateException("생명보험 가입정보 API Decoding service key가 설정되지 않았습니다.");
         }
 
-        List<CarInsuranceContractExternalItem> results = new ArrayList<>();
-        YearMonth current = YearMonth.parse(fromYm, YEAR_MONTH_FORMATTER);
-        YearMonth end = YearMonth.parse(toYm, YEAR_MONTH_FORMATTER);
-        while (!current.isAfter(end)) {
-            results.addAll(fetchByMonth(current.format(YEAR_MONTH_FORMATTER)));
-            current = current.plusMonths(1);
+        List<LifeInsuranceExternalItem> results = new ArrayList<>();
+        int currentYear = Integer.parseInt(fromYear);
+        int endYear = Integer.parseInt(toYear);
+        while (currentYear <= endYear) {
+            results.addAll(fetchByYear(String.valueOf(currentYear)));
+            currentYear++;
         }
         return results;
     }
 
-    private List<CarInsuranceContractExternalItem> fetchByMonth(String yearMonth) {
-        List<CarInsuranceContractExternalItem> results = new ArrayList<>();
+    private List<LifeInsuranceExternalItem> fetchByYear(String year) {
+        List<LifeInsuranceExternalItem> results = new ArrayList<>();
         int pageNo = 1;
         int totalCount = Integer.MAX_VALUE;
 
         while (results.size() < totalCount) {
             int currentPageNo = pageNo;
-            String requestUri = buildRequestUri(yearMonth, currentPageNo);
+            String requestUri = buildRequestUri(year, currentPageNo);
             JsonNode bodyNode = requestBody(requestUri);
             totalCount = bodyNode.path("totalCount").asInt(0);
             List<JsonNode> itemNodes = extractItemNodes(bodyNode.path("items").path("item"));
             for (JsonNode itemNode : itemNodes) {
-                results.add(mapItem(itemNode));
+                results.add(mapItem(year, itemNode));
             }
 
             if (itemNodes.isEmpty()) {
@@ -96,13 +93,13 @@ public class CarInsuranceContractApiClient {
         return results;
     }
 
-    private String buildRequestUri(String yearMonth, int pageNo) {
-        return baseUrl + "/getContractInfo"
+    private String buildRequestUri(String year, int pageNo) {
+        return baseUrl + "/getLifeInsuJoinStatus"
             + "?serviceKey=" + encode(serviceKey)
             + "&pageNo=" + pageNo
             + "&numOfRows=" + numOfRows
             + "&resultType=json"
-            + "&likeIsuCmpyOfrYm=" + encode(yearMonth);
+            + "&likeSttsAccmlTrgtYr=" + encode(year);
     }
 
     private JsonNode requestBody(String requestUri) {
@@ -113,7 +110,7 @@ public class CarInsuranceContractApiClient {
             .block(Duration.ofMillis(timeoutMs));
 
         if (responseBody == null || responseBody.isBlank()) {
-            throw new IllegalStateException("자동차보험 계약정보 API 응답이 비어 있습니다.");
+            throw new IllegalStateException("생명보험 가입정보 API 응답이 비어 있습니다.");
         }
 
         JsonNode root = readTree(responseBody);
@@ -122,7 +119,7 @@ public class CarInsuranceContractApiClient {
         String resultCode = headerNode.path("resultCode").asText("");
         if (!"00".equals(resultCode)) {
             String resultMessage = headerNode.path("resultMsg").asText("알 수 없는 외부 API 오류");
-            throw new IllegalStateException("자동차보험 계약정보 API 오류: " + resultMessage);
+            throw new IllegalStateException("생명보험 가입정보 API 오류: " + resultMessage);
         }
         return responseNode.path("body");
     }
@@ -131,7 +128,7 @@ public class CarInsuranceContractApiClient {
         try {
             return objectMapper.readTree(responseBody);
         } catch (Exception exception) {
-            throw new IllegalStateException("자동차보험 계약정보 API 응답 파싱에 실패했습니다.", exception);
+            throw new IllegalStateException("생명보험 가입정보 API 응답 파싱에 실패했습니다.", exception);
         }
     }
 
@@ -147,34 +144,39 @@ public class CarInsuranceContractApiClient {
         return List.of(itemNode);
     }
 
-    private CarInsuranceContractExternalItem mapItem(JsonNode itemNode) {
-        BigDecimal earnedPremium = readDecimal(itemNode, "earnedPremium", "erndInsPrm", "pmmiPrem", "premAmt", "elpsInpm");
-        long contractCount = readLong(itemNode, "contractCount", "sbcnCnt", "joinCnt", "insuJoinCnt");
+    private LifeInsuranceExternalItem mapItem(String requestYear, JsonNode itemNode) {
+        String statYear = defaultText(readText(itemNode, "sttsAccmlTrgtYr", "baseYear", "year"), requestYear);
+        long subscriptionCount = readLong(itemNode, "subscriptionCount", "sbcnCnt", "joinCnt", "insuJoinCnt");
+        BigDecimal subscriptionRate = readDecimal(
+            itemNode,
+            "subscriptionRate",
+            "joinRt",
+            "joinRto",
+            "sbcnRt",
+            "insuJoinRt",
+            "jngpRt"
+        );
 
-        if (contractCount == 0L || earnedPremium == null) {
+        if (subscriptionCount == 0L || subscriptionRate == null) {
             List<BigDecimal> unknownMetrics = readUnknownNumericValues(itemNode);
-            if (contractCount == 0L && !unknownMetrics.isEmpty()) {
-                contractCount = unknownMetrics.get(0).longValue();
+            if (subscriptionCount == 0L && !unknownMetrics.isEmpty()) {
+                subscriptionCount = unknownMetrics.get(0).longValue();
             }
-            if (earnedPremium == null) {
-                if (unknownMetrics.size() >= 2) {
-                    earnedPremium = unknownMetrics.get(1);
-                } else if (unknownMetrics.size() == 1) {
-                    earnedPremium = unknownMetrics.get(0);
-                }
+            if (subscriptionRate == null && unknownMetrics.size() >= 2) {
+                subscriptionRate = unknownMetrics.get(1);
+            } else if (subscriptionRate == null && subscriptionCount != 0L && unknownMetrics.size() == 1) {
+                subscriptionRate = unknownMetrics.get(0);
             }
         }
 
-        return new CarInsuranceContractExternalItem(
-            readText(itemNode, "isuCmpyOfrYm"),
-            readText(itemNode, "isuItmsNm"),
-            readText(itemNode, "mogClsfNm"),
-            GenderType.fromLabel(readText(itemNode, "sexNm")),
-            defaultText(readText(itemNode, "aggr"), "미상"),
-            defaultText(readText(itemNode, "atmbPlorNm"), "미상"),
-            defaultText(readText(itemNode, "kncrNm"), "미상"),
-            contractCount,
-            earnedPremium != null ? earnedPremium : BigDecimal.ZERO,
+        return new LifeInsuranceExternalItem(
+            LocalDate.of(Integer.parseInt(statYear), 1, 1),
+            defaultText(readText(itemNode, "areaNm", "areaName"), "미상"),
+            defaultText(readText(itemNode, "rchnAggr", "aggr", "ageGroup"), "미상"),
+            GenderType.fromLabel(readText(itemNode, "sexNm", "gender")),
+            defaultText(readText(itemNode, "isuKindNm", "isuItmsNm", "insuranceType"), "미상"),
+            subscriptionCount,
+            subscriptionRate != null ? subscriptionRate : BigDecimal.ZERO,
             itemNode.toString()
         );
     }
@@ -182,15 +184,16 @@ public class CarInsuranceContractApiClient {
     private List<BigDecimal> readUnknownNumericValues(JsonNode itemNode) {
         List<BigDecimal> values = new ArrayList<>();
         Set<String> handled = new HashSet<>(DIMENSION_FIELDS);
-        handled.add("contractCount");
-        handled.add("earnedPremium");
-        handled.add("erndInsPrm");
-        handled.add("pmmiPrem");
-        handled.add("premAmt");
-        handled.add("elpsInpm");
+        handled.add("subscriptionCount");
+        handled.add("subscriptionRate");
         handled.add("sbcnCnt");
         handled.add("joinCnt");
         handled.add("insuJoinCnt");
+        handled.add("joinRt");
+        handled.add("joinRto");
+        handled.add("sbcnRt");
+        handled.add("insuJoinRt");
+        handled.add("jngpRt");
 
         for (String fieldName : itemNode.propertyNames()) {
             if (handled.contains(fieldName)) {
@@ -246,9 +249,17 @@ public class CarInsuranceContractApiClient {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private String readText(JsonNode node, String fieldName) {
-        JsonNode valueNode = node.path(fieldName);
-        return valueNode.isMissingNode() || valueNode.isNull() ? "" : valueNode.asText("").trim();
+    private String readText(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode valueNode = node.path(fieldName);
+            if (!valueNode.isMissingNode() && !valueNode.isNull()) {
+                String value = valueNode.asText("").trim();
+                if (!value.isBlank()) {
+                    return value;
+                }
+            }
+        }
+        return "";
     }
 
     private String defaultText(String value, String defaultValue) {
