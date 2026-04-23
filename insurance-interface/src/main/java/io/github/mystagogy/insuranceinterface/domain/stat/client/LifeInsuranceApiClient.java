@@ -164,6 +164,8 @@ public class LifeInsuranceApiClient {
             }
             if (subscriptionRate == null && unknownMetrics.size() >= 2) {
                 subscriptionRate = unknownMetrics.get(1);
+            } else if (subscriptionRate == null && subscriptionCount != 0L && unknownMetrics.size() == 1) {
+                subscriptionRate = unknownMetrics.get(0);
             }
         }
 

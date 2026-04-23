@@ -59,7 +59,7 @@ public class CarInsuranceContractApiClient {
 
     public List<CarInsuranceContractExternalItem> fetch(String fromYm, String toYm) {
         if (serviceKey == null || serviceKey.isBlank()) {
-            throw new IllegalStateException("자동차보험 계약정보 API service key가 설정되지 않았습니다.");
+            throw new IllegalStateException("자동차보험 계약정보 API Decoding service key가 설정되지 않았습니다.");
         }
 
         List<CarInsuranceContractExternalItem> results = new ArrayList<>();
