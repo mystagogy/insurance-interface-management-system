@@ -46,7 +46,7 @@ class IndemnityInsuranceStatServiceTest {
     private IndemnityInsuranceApiClient indemnityInsuranceApiClient;
 
     @Mock
-    private IndemnityInsuranceStatFailureResolver failureResolver;
+    private StatFailureResolver failureResolver;
 
     @Mock
     private UserRepository userRepository;
@@ -111,8 +111,8 @@ class IndemnityInsuranceStatServiceTest {
         when(apiCallHistoryAuditService.createPending(any(), any(), any())).thenReturn(pendingHistory);
         when(indemnityInsuranceApiClient.fetch("202401", "202401"))
             .thenThrow(new IllegalStateException("실손보험 가입정보 API 응답이 비어 있습니다."));
-        when(failureResolver.resolve(any())).thenReturn(
-            new IndemnityInsuranceStatFailureResolver.ResolvedFailure(
+        when(failureResolver.resolve(any(), any(), any(), any())).thenReturn(
+            new StatFailureResolver.ResolvedFailure(
                 500,
                 "실손보험 가입정보 외부 API 호출에 실패했습니다.",
                 "indemnity insurance subscription api failed",
