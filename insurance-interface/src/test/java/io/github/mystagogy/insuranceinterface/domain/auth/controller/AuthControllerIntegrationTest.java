@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -108,10 +109,31 @@ class AuthControllerIntegrationTest {
 
     @Test
     void protectedEndpointRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/dashboard/summary"))
+        mockMvc.perform(get("/dashboard/summary").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
+    void rootPathRedirectsToLoginPage() throws Exception {
+        mockMvc.perform(get("/"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void unauthenticatedHtmlPageRequestRedirectsToLoginPage() throws Exception {
+        mockMvc.perform(get("/dashboard").accept(MediaType.TEXT_HTML))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/login?required=true"));
+    }
+
+    @Test
+    void unauthenticatedHtmlApiRequestRedirectsToLoginPage() throws Exception {
+        mockMvc.perform(get("/dashboard/summary").accept(MediaType.TEXT_HTML))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/login?required=true"));
     }
 
     @Test
@@ -119,6 +141,28 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/login"))
             .andExpect(status().isOk())
             .andExpect(forwardedUrl("/login.html"));
+    }
+
+    @Test
+    void dashboardPageIsAccessibleAfterLogin() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/dashboard").session(session))
+            .andExpect(status().isOk())
+            .andExpect(forwardedUrl("/dashboard.html"));
+    }
+
+    @Test
+    void historyPageIsAccessibleAfterLogin() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/history").session(session))
+            .andExpect(status().isOk())
+            .andExpect(forwardedUrl("/history.html"));
     }
 
     @Test

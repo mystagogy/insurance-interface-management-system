@@ -145,7 +145,7 @@ class LifeInsuranceStatControllerIntegrationTest {
 
     private MockHttpSession loginSession() throws Exception {
         MvcResult loginResult = mockMvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {

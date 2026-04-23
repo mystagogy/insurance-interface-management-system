@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>호출 이력</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --page-bg-start: #f4f8ff;
+            --page-bg-end: #dde7f5;
+            --panel-bg: #ffffff;
+            --border-color: #d3dceb;
+            --text-main: #1f2937;
+            --text-sub: #5f6b7a;
+            --success: #17824a;
+            --fail: #c62f2f;
+            --pending: #c78d17;
+            --retry: #305fd4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background: linear-gradient(165deg, var(--page-bg-start), var(--page-bg-end));
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--text-sub);
+            font-size: 0.93rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+            margin-bottom: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .field input {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            min-width: 140px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .button {
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 8px 20px rgba(35, 50, 80, 0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e8edf5;
+            text-align: left;
+            font-size: 0.92rem;
+        }
+
+        th {
+            color: var(--text-sub);
+            font-weight: 700;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 72px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .status-success {
+            background: var(--success);
+        }
+
+        .status-fail {
+            background: var(--fail);
+        }
+
+        .status-pending {
+            background: var(--pending);
+        }
+
+        .status-retry {
+            background: var(--retry);
+        }
+
+        .status-default {
+            background: #6f7f95;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 24px;
+        }
+
+        .message {
+            margin-top: 10px;
+            min-height: 18px;
+            color: var(--fail);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 720px) {
+            table, thead, tbody, tr, th, td {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tr {
+                border: 1px solid #e8edf5;
+                border-radius: 10px;
+                margin-bottom: 8px;
+                padding: 8px 10px;
+                background: #fff;
+            }
+
+            td {
+                border: 0;
+                padding: 6px 0;
+            }
+
+            td::before {
+                content: attr(data-label);
+                display: block;
+                color: var(--text-sub);
+                font-size: 0.78rem;
+                margin-bottom: 3px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div>
+            <h1 class="title">호출 이력</h1>
+            <p class="subtitle">조회 기간 내 외부 인터페이스 호출 상태를 확인합니다.</p>
+        </div>
+        <div class="actions">
+            <a class="button" href="/dashboard">대시보드</a>
+            <button class="button" type="button" id="refreshButton">새로고침</button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="filters">
+            <div class="field">
+                <label for="fromDate">from (yyyyMMdd)</label>
+                <input id="fromDate" type="text" inputmode="numeric" maxlength="8" placeholder="20260401">
+            </div>
+            <div class="field">
+                <label for="toDate">to (yyyyMMdd)</label>
+                <input id="toDate" type="text" inputmode="numeric" maxlength="8" placeholder="20260407">
+            </div>
+            <button class="button" type="button" id="searchButton">조회</button>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>요청 ID</th>
+                <th>조회 유형</th>
+                <th>상태</th>
+            </tr>
+            </thead>
+            <tbody id="historyTableBody">
+            <tr>
+                <td colspan="3" class="empty">데이터를 불러오는 중입니다.</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="message" id="message"></p>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const tableBody = document.getElementById("historyTableBody");
+        const messageEl = document.getElementById("message");
+        const refreshButton = document.getElementById("refreshButton");
+        const searchButton = document.getElementById("searchButton");
+        const fromDateInput = document.getElementById("fromDate");
+        const toDateInput = document.getElementById("toDate");
+
+        setDefaultDateRange();
+        loadRecentHistory();
+        refreshButton.addEventListener("click", loadRecentHistory);
+        searchButton.addEventListener("click", loadRecentHistory);
+        toDateInput.addEventListener("blur", normalizeToDateInput);
+
+        async function loadRecentHistory() {
+            messageEl.textContent = "";
+            refreshButton.disabled = true;
+            searchButton.disabled = true;
+            try {
+                const from = fromDateInput.value.trim();
+                const to = normalizeToDateInput();
+                const query = new URLSearchParams();
+                if (from) {
+                    query.set("from", from);
+                }
+                if (to) {
+                    query.set("to", to);
+                }
+
+                const requestUrl = "/history/recent" + (query.size > 0 ? "?" + query.toString() : "");
+                const response = await fetch(requestUrl, {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+                if (response.status === 401) {
+                    window.location.replace("/login?next=/history");
+                    return;
+                }
+                const payload = await response.json();
+                if (!response.ok || !payload.success || !Array.isArray(payload.data)) {
+                    messageEl.textContent = payload.error?.message || "호출 이력을 불러오지 못했습니다.";
+                    renderEmpty("호출 이력을 표시할 수 없습니다.");
+                    return;
+                }
+                renderRows(payload.data);
+            } catch (error) {
+                messageEl.textContent = "호출 이력 조회 중 오류가 발생했습니다.";
+                renderEmpty("호출 이력을 불러오지 못했습니다.");
+            } finally {
+                refreshButton.disabled = false;
+                searchButton.disabled = false;
+            }
+        }
+
+        function renderRows(items) {
+            if (items.length === 0) {
+                renderEmpty("조회된 호출 이력이 없습니다.");
+                return;
+            }
+
+            tableBody.innerHTML = items.map(function (item) {
+                const statusClass = getStatusClass(item.status);
+                return [
+                    "<tr>",
+                    "<td data-label=\"요청 ID\">" + escapeHtml(item.requestId) + "</td>",
+                    "<td data-label=\"조회 유형\">" + escapeHtml(item.interfaceName || "-") + "</td>",
+                    "<td data-label=\"상태\"><span class=\"status-badge " + statusClass + "\">" + escapeHtml(item.status) + "</span></td>",
+                    "</tr>"
+                ].join("");
+            }).join("");
+        }
+
+        function renderEmpty(message) {
+            tableBody.innerHTML = "<tr><td colspan=\"3\" class=\"empty\">" + escapeHtml(message) + "</td></tr>";
+        }
+
+        function setDefaultDateRange() {
+            const today = new Date();
+            const from = new Date(today);
+            from.setDate(today.getDate() - 6);
+            fromDateInput.value = formatDate(from);
+            toDateInput.value = formatDate(today);
+        }
+
+        function normalizeToDateInput() {
+            const raw = toDateInput.value.trim();
+            const parsed = parseYyyyMmDd(raw);
+            if (!parsed) {
+                return raw;
+            }
+            const today = new Date();
+            const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            if (parsed > todayDateOnly) {
+                const clamped = formatDate(todayDateOnly);
+                toDateInput.value = clamped;
+                return clamped;
+            }
+            const normalized = formatDate(parsed);
+            toDateInput.value = normalized;
+            return normalized;
+        }
+
+        function formatDate(date) {
+            const year = String(date.getFullYear());
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return year + month + day;
+        }
+
+        function parseYyyyMmDd(value) {
+            if (!/^\d{8}$/.test(value)) {
+                return null;
+            }
+            const year = Number(value.substring(0, 4));
+            const month = Number(value.substring(4, 6));
+            const day = Number(value.substring(6, 8));
+            const date = new Date(year, month - 1, day);
+            if (
+                date.getFullYear() !== year ||
+                date.getMonth() !== month - 1 ||
+                date.getDate() !== day
+            ) {
+                return null;
+            }
+            return date;
+        }
+
+        function getStatusClass(status) {
+            if (status === "SUCCESS") {
+                return "status-success";
+            }
+            if (status === "FAIL") {
+                return "status-fail";
+            }
+            if (status === "PENDING") {
+                return "status-pending";
+            }
+            if (status === "RETRY") {
+                return "status-retry";
+            }
+            return "status-default";
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll("\"", "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+    })();
+</script>
+</body>
+</html>
