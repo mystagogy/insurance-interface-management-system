@@ -60,7 +60,7 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/auth/login", "/login", "/login.html", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error")
+                .requestMatchers("/", "/auth/login", "/login", "/login.html", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
@@ -72,15 +72,26 @@ public class SecurityConfig {
                 .logoutSuccessHandler((request, response, authentication) -> writeSuccessResponse(response, HttpStatus.OK))
             )
             .exceptionHandling(exception -> exception
-                .authenticationEntryPoint((request, response, authException) ->
-                    writeErrorResponse(request, response, HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.")
-                )
+                .authenticationEntryPoint((request, response, authException) -> handleAuthenticationEntryPoint(request, response))
                 .accessDeniedHandler((request, response, accessDeniedException) ->
                     writeErrorResponse(request, response, HttpStatus.FORBIDDEN, "접근 권한이 없습니다.")
                 )
             )
             .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
         return http.build();
+    }
+
+    private void handleAuthenticationEntryPoint(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if (isHtmlNavigationRequest(request)) {
+            response.sendRedirect("/login?required=true");
+            return;
+        }
+        writeErrorResponse(request, response, HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+    }
+
+    private boolean isHtmlNavigationRequest(HttpServletRequest request) {
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.contains(MediaType.TEXT_HTML_VALUE);
     }
 
     private void writeSuccessResponse(HttpServletResponse response, HttpStatus status) throws IOException {

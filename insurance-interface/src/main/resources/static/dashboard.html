@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>운영 대시보드</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --page-bg-start: #f4f8ff;
+            --page-bg-end: #dde7f5;
+            --panel-bg: #ffffff;
+            --border-color: #d3dceb;
+            --text-main: #1f2937;
+            --text-sub: #5f6b7a;
+            --accent: #2f6fd6;
+            --accent-soft: #e7efff;
+            --ok: #218f53;
+            --fail: #cc3434;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background: linear-gradient(165deg, var(--page-bg-start), var(--page-bg-end));
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 28px 20px 40px;
+        }
+
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--text-sub);
+            font-size: 0.95rem;
+        }
+
+        .button {
+            border: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .button.primary {
+            background: linear-gradient(135deg, var(--accent), #1d57b5);
+            color: #fff;
+            border: 0;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 8px 20px rgba(35, 50, 80, 0.08);
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--text-sub);
+        }
+
+        .card-value {
+            margin: 8px 0 0;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .card-value.ok {
+            color: var(--ok);
+        }
+
+        .card-value.fail {
+            color: var(--fail);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 8px 20px rgba(35, 50, 80, 0.08);
+            margin-bottom: 12px;
+        }
+
+        .rate-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .rate-label {
+            font-size: 0.94rem;
+            color: var(--text-sub);
+        }
+
+        .rate-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #eef2f9;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2f6fd6, #7ca8ef);
+            width: 0;
+            transition: width 0.25s ease;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .message {
+            margin-top: 10px;
+            color: var(--fail);
+            font-size: 0.9rem;
+            min-height: 18px;
+        }
+
+        .meta {
+            margin: 0;
+            font-size: 0.87rem;
+            color: var(--text-sub);
+        }
+
+        @media (max-width: 800px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="top-bar">
+        <div>
+            <h1 class="title">운영자 대시보드</h1>
+            <p class="subtitle">오늘 호출 현황과 실패 상태를 빠르게 확인합니다.</p>
+        </div>
+        <button class="button" id="logoutButton" type="button">로그아웃</button>
+    </header>
+
+    <section class="card-grid">
+        <article class="card">
+            <p class="card-title">오늘 전체 호출</p>
+            <p class="card-value" id="todayTotal">-</p>
+        </article>
+        <article class="card">
+            <p class="card-title">성공 건수</p>
+            <p class="card-value ok" id="successCount">-</p>
+        </article>
+        <article class="card">
+            <p class="card-title">실패 건수</p>
+            <p class="card-value fail" id="failCount">-</p>
+        </article>
+    </section>
+
+    <section class="panel">
+        <div class="rate-row">
+            <span class="rate-label">성공률</span>
+            <strong class="rate-value" id="successRate">-</strong>
+        </div>
+        <div class="progress">
+            <div class="progress-bar" id="successProgress"></div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <p class="meta">빠른 작업</p>
+        <div class="actions">
+            <a class="button primary" href="/history">호출 이력 보기</a>
+            <a class="button" href="/swagger-ui/index.html" target="_blank" rel="noopener">Swagger 열기</a>
+        </div>
+        <p class="message" id="message"></p>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const messageEl = document.getElementById("message");
+        const totalEl = document.getElementById("todayTotal");
+        const successEl = document.getElementById("successCount");
+        const failEl = document.getElementById("failCount");
+        const rateEl = document.getElementById("successRate");
+        const progressEl = document.getElementById("successProgress");
+        const logoutButton = document.getElementById("logoutButton");
+
+        loadSummary();
+
+        logoutButton.addEventListener("click", async function () {
+            try {
+                const csrfToken = getCookie("XSRF-TOKEN");
+                const response = await fetch("/auth/logout", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: csrfToken ? {"X-XSRF-TOKEN": decodeURIComponent(csrfToken)} : {}
+                });
+                if (!response.ok) {
+                    messageEl.textContent = "로그아웃 처리에 실패했습니다.";
+                    return;
+                }
+                window.location.replace("/login");
+            } catch (error) {
+                messageEl.textContent = "로그아웃 중 오류가 발생했습니다.";
+            }
+        });
+
+        async function loadSummary() {
+            try {
+                const response = await fetch("/dashboard/summary", {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+                const payload = await response.json();
+                if (response.status === 401) {
+                    window.location.replace("/login?next=/dashboard");
+                    return;
+                }
+                if (!response.ok || !payload.success || !payload.data) {
+                    messageEl.textContent = payload.error?.message || "대시보드 데이터를 불러오지 못했습니다.";
+                    return;
+                }
+                renderSummary(payload.data);
+            } catch (error) {
+                messageEl.textContent = "대시보드 조회 중 오류가 발생했습니다.";
+            }
+        }
+
+        function renderSummary(summary) {
+            const total = Number(summary.todayTotal || 0);
+            const success = Number(summary.successCount || 0);
+            const fail = Number(summary.failCount || 0);
+            const successRate = total > 0 ? (success / total) * 100 : 0;
+
+            totalEl.textContent = formatCount(total);
+            successEl.textContent = formatCount(success);
+            failEl.textContent = formatCount(fail);
+            rateEl.textContent = successRate.toFixed(1) + "%";
+            progressEl.style.width = Math.max(0, Math.min(100, successRate)) + "%";
+        }
+
+        function formatCount(value) {
+            return new Intl.NumberFormat("ko-KR").format(value) + "건";
+        }
+
+        function getCookie(name) {
+            const encodedName = name + "=";
+            const decoded = decodeURIComponent(document.cookie || "");
+            const items = decoded.split(";");
+            for (let i = 0; i < items.length; i += 1) {
+                const item = items[i].trim();
+                if (item.indexOf(encodedName) === 0) {
+                    return item.substring(encodedName.length);
+                }
+            }
+            return "";
+        }
+    })();
+</script>
+</body>
+</html>

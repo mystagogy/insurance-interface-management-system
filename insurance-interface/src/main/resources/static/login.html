@@ -120,7 +120,12 @@
         const loginForm = document.getElementById("loginForm");
         const submitButton = document.getElementById("submitButton");
         const messageBox = document.getElementById("message");
-        const redirectUrl = resolveRedirectUrl(new URLSearchParams(window.location.search).get("next"));
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectUrl = "/dashboard";
+
+        if (searchParams.get("required") === "true") {
+            messageBox.textContent = "로그인이 필요합니다.";
+        }
 
         loginForm.addEventListener("submit", async function (event) {
             event.preventDefault();
@@ -151,13 +156,6 @@
                 submitButton.disabled = false;
             }
         });
-
-        function resolveRedirectUrl(next) {
-            if (!next || !next.startsWith("/") || next.startsWith("//")) {
-                return "/swagger-ui/index.html";
-            }
-            return next;
-        }
     })();
 </script>
 </body>
