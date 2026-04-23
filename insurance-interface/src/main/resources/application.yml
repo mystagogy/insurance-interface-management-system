@@ -28,3 +28,8 @@ external:
     service-key: ${LIFE_INSURANCE_API_SERVICE_KEY:${CAR_INSURANCE_API_SERVICE_KEY:}}
     timeout-ms: ${LIFE_INSURANCE_TIMEOUT_MS:5000}
     num-of-rows: ${LIFE_INSURANCE_NUM_OF_ROWS:300}
+  indemnity-insurance:
+    base-url: ${INDEMNITY_INSURANCE_API_BASE_URL:http://apis.data.go.kr/1160100/service/GetMedicalReimbursementInsuranceInfoService}
+    service-key: ${INDEMNITY_INSURANCE_API_SERVICE_KEY:${CAR_INSURANCE_API_SERVICE_KEY:}}
+    timeout-ms: ${INDEMNITY_INSURANCE_TIMEOUT_MS:5000}
+    num-of-rows: ${INDEMNITY_INSURANCE_NUM_OF_ROWS:300}
