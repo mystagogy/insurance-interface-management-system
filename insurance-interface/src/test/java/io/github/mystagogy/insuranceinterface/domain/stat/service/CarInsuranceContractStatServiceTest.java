@@ -45,7 +45,7 @@ class CarInsuranceContractStatServiceTest {
     private CarInsuranceContractApiClient carInsuranceContractApiClient;
 
     @Mock
-    private CarInsuranceContractStatFailureResolver failureResolver;
+    private StatFailureResolver failureResolver;
 
     @Mock
     private UserRepository userRepository;
@@ -162,8 +162,8 @@ class CarInsuranceContractStatServiceTest {
         when(apiCallHistoryAuditService.createPending(any(), any(), any())).thenReturn(pendingHistory);
         when(carInsuranceContractApiClient.fetch("202401", "202401"))
             .thenThrow(new IllegalStateException("자동차보험 계약정보 API 응답이 비어 있습니다."));
-        when(failureResolver.resolve(any())).thenReturn(
-            new CarInsuranceContractStatFailureResolver.ResolvedFailure(
+        when(failureResolver.resolve(any(), any(), any(), any())).thenReturn(
+            new StatFailureResolver.ResolvedFailure(
                 500,
                 "자동차보험 계약정보 외부 API 호출에 실패했습니다.",
                 "car insurance contract api failed",

@@ -46,7 +46,7 @@ class LifeInsuranceStatServiceTest {
     private LifeInsuranceApiClient lifeInsuranceApiClient;
 
     @Mock
-    private LifeInsuranceStatFailureResolver failureResolver;
+    private StatFailureResolver failureResolver;
 
     @Mock
     private UserRepository userRepository;
@@ -113,8 +113,8 @@ class LifeInsuranceStatServiceTest {
         when(apiCallHistoryAuditService.createPending(any(), any(), any())).thenReturn(pendingHistory);
         when(lifeInsuranceApiClient.fetch("2023", "2023"))
             .thenThrow(new IllegalStateException("생명보험 가입정보 API 응답이 비어 있습니다."));
-        when(failureResolver.resolve(any())).thenReturn(
-            new LifeInsuranceStatFailureResolver.ResolvedFailure(
+        when(failureResolver.resolve(any(), any(), any(), any())).thenReturn(
+            new StatFailureResolver.ResolvedFailure(
                 500,
                 "생명보험 가입정보 외부 API 호출에 실패했습니다.",
                 "life insurance subscription api failed",
