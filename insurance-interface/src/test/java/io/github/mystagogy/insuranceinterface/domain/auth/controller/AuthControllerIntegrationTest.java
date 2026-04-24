@@ -183,7 +183,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void logoutWithoutCsrfReturnsForbidden() throws Exception {
+    void logoutWithoutCsrfReturnsSuccess() throws Exception {
         MvcResult loginResult = login("operator1", "testpass123!");
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
         assertThat(session).isNotNull();
@@ -192,9 +192,10 @@ class AuthControllerIntegrationTest {
                 post("/auth/logout")
                     .session(session)
             )
-            .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.error.message").value("접근 권한이 없습니다."));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.error").value(Matchers.nullValue()));
     }
 
     private MvcResult login(String username, String password) throws Exception {

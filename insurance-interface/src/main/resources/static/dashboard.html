@@ -256,11 +256,16 @@
         logoutButton.addEventListener("click", async function () {
             try {
                 const csrfToken = getCookie("XSRF-TOKEN");
+                const headers = csrfToken ? {"X-XSRF-TOKEN": csrfToken} : {};
                 const response = await fetch("/auth/logout", {
                     method: "POST",
                     credentials: "same-origin",
-                    headers: csrfToken ? {"X-XSRF-TOKEN": decodeURIComponent(csrfToken)} : {}
+                    headers: headers
                 });
+                if (response.status === 401) {
+                    window.location.replace("/login");
+                    return;
+                }
                 if (!response.ok) {
                     messageEl.textContent = "로그아웃 처리에 실패했습니다.";
                     return;
@@ -311,12 +316,16 @@
 
         function getCookie(name) {
             const encodedName = name + "=";
-            const decoded = decodeURIComponent(document.cookie || "");
-            const items = decoded.split(";");
+            const items = (document.cookie || "").split(";");
             for (let i = 0; i < items.length; i += 1) {
                 const item = items[i].trim();
                 if (item.indexOf(encodedName) === 0) {
-                    return item.substring(encodedName.length);
+                    const value = item.substring(encodedName.length);
+                    try {
+                        return decodeURIComponent(value);
+                    } catch (error) {
+                        return value;
+                    }
                 }
             }
             return "";
