@@ -116,6 +116,14 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void csrfEndpointRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/auth/csrf").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
     void rootPathRedirectsToLoginPage() throws Exception {
         mockMvc.perform(get("/"))
             .andExpect(status().is3xxRedirection())
@@ -166,6 +174,19 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void csrfEndpointReturnsTokenAfterLogin() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/auth/csrf").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.token").value(Matchers.not(Matchers.blankOrNullString())))
+            .andExpect(jsonPath("$.data.headerName").value("X-XSRF-TOKEN"));
+    }
+
+    @Test
     void logoutSuccessReturnsApiResponse() throws Exception {
         MvcResult loginResult = login("operator1", "testpass123!");
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
@@ -183,7 +204,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void logoutWithoutCsrfReturnsSuccess() throws Exception {
+    void logoutWithoutCsrfReturnsForbidden() throws Exception {
         MvcResult loginResult = login("operator1", "testpass123!");
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
         assertThat(session).isNotNull();
@@ -192,10 +213,9 @@ class AuthControllerIntegrationTest {
                 post("/auth/logout")
                     .session(session)
             )
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data").value(Matchers.nullValue()))
-            .andExpect(jsonPath("$.error").value(Matchers.nullValue()));
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.message").value("접근 권한이 없습니다."));
     }
 
     private MvcResult login(String username, String password) throws Exception {
