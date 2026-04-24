@@ -247,4 +247,22 @@ class AuthControllerIntegrationTest {
             .andExpect(forwardedUrl("/life-insurance.html"));
     }
 
+    @Test
+    void indemnityInsurancePageRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/indemnity-insurance").accept(MediaType.TEXT_HTML))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/login?required=true"));
+    }
+
+    @Test
+    void indemnityInsurancePageIsAccessibleAfterLogin() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/indemnity-insurance").session(session))
+            .andExpect(status().isOk())
+            .andExpect(forwardedUrl("/indemnity-insurance.html"));
+    }
+
 }
