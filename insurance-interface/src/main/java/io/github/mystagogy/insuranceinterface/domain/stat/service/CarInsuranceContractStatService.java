@@ -49,10 +49,17 @@ public class CarInsuranceContractStatService extends AbstractAuditedStatService 
     }
 
     /**
-     * 자동차보험 계약 통계를 조회한다.
-     * 항상 외부 API를 호출해 최신 데이터를 동기화한 뒤, 저장된 통계를 응답으로 반환한다.
+     * 저장된 자동차보험 계약 통계를 조회한다.
      */
-    public CarInsuranceContractStatResponse getContractStats(CarInsuranceContractStatQueryRequest request) {
+    public CarInsuranceContractStatResponse getStoredContractStats(CarInsuranceContractStatQueryRequest request) {
+        validatePeriod(request);
+        return toResponse(request, loadStats(request.fromYm(), request.toYm()));
+    }
+
+    /**
+     * 자동차보험 계약 통계를 외부 API로 동기화한 뒤 조회한다.
+     */
+    public CarInsuranceContractStatResponse refreshContractStats(CarInsuranceContractStatQueryRequest request) {
         validatePeriod(request);
         return executeWithAudit(
             API_NAME,
@@ -65,6 +72,13 @@ public class CarInsuranceContractStatService extends AbstractAuditedStatService 
             },
             this::handleFailure
         );
+    }
+
+    /**
+     * 하위 호환을 위한 기존 메서드.
+     */
+    public CarInsuranceContractStatResponse getContractStats(CarInsuranceContractStatQueryRequest request) {
+        return refreshContractStats(request);
     }
 
     /**

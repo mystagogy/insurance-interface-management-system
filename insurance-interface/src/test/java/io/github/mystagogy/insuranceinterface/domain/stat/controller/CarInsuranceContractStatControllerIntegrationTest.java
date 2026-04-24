@@ -73,7 +73,7 @@ class CarInsuranceContractStatControllerIntegrationTest {
     }
 
     @Test
-    void authenticatedRequestReturnsCarInsuranceContractStats() throws Exception {
+    void authenticatedRequestReturnsStoredCarInsuranceContractStatsByDefault() throws Exception {
         MockHttpSession session = loginSession();
         CarInsuranceContractStatResponse response = new CarInsuranceContractStatResponse(
             "202401",
@@ -91,7 +91,7 @@ class CarInsuranceContractStatControllerIntegrationTest {
                 new BigDecimal("10000.00")
             ))
         );
-        when(carInsuranceContractStatService.getContractStats(eq(new CarInsuranceContractStatQueryRequest("202401", "202401"))))
+        when(carInsuranceContractStatService.getStoredContractStats(eq(new CarInsuranceContractStatQueryRequest("202401", "202401"))))
             .thenReturn(response);
 
         mockMvc.perform(
@@ -110,7 +110,47 @@ class CarInsuranceContractStatControllerIntegrationTest {
             .andExpect(jsonPath("$.data.items[0].contractCount").value(10))
             .andExpect(jsonPath("$.data.items[0].earnedPremium").value(10000.00));
 
-        verify(carInsuranceContractStatService).getContractStats(new CarInsuranceContractStatQueryRequest("202401", "202401"));
+        verify(carInsuranceContractStatService).getStoredContractStats(
+            new CarInsuranceContractStatQueryRequest("202401", "202401")
+        );
+    }
+
+    @Test
+    void authenticatedRequestWithSyncTrueRefreshesAndReturnsStats() throws Exception {
+        MockHttpSession session = loginSession();
+        CarInsuranceContractStatResponse response = new CarInsuranceContractStatResponse(
+            "202401",
+            "202401",
+            1,
+            List.of(new CarInsuranceContractStatItemResponse(
+                "202401",
+                "개인용",
+                "대인배상1",
+                "남성",
+                "20대 이하",
+                "외산",
+                "중형",
+                10L,
+                new BigDecimal("10000.00")
+            ))
+        );
+        when(carInsuranceContractStatService.refreshContractStats(eq(new CarInsuranceContractStatQueryRequest("202401", "202401"))))
+            .thenReturn(response);
+
+        mockMvc.perform(
+                get("/api/v1/stats/car-insurance/contracts")
+                    .param("fromYm", "202401")
+                    .param("toYm", "202401")
+                    .param("sync", "true")
+                    .session(session)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.totalCount").value(1));
+
+        verify(carInsuranceContractStatService).refreshContractStats(
+            new CarInsuranceContractStatQueryRequest("202401", "202401")
+        );
     }
 
     @Test

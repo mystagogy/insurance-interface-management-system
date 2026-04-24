@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,10 +55,8 @@ class CarInsuranceContractStatServiceTest {
     private CarInsuranceContractStatService carInsuranceContractStatService;
 
     @Test
-    void requestAlwaysFetchesExternalDataEvenWhenStatsAlreadyExist() {
+    void getStoredStatsReturnsSavedDataWithoutExternalCall() {
         ApiInfo apiInfo = new ApiInfo(CarInsuranceContractStatService.API_NAME, "금융위원회", "http://example.com", 5000);
-        ApiCallHistory pendingHistory = new ApiCallHistory(apiInfo, null, "fromYm=202401,toYm=202401");
-        ReflectionTestUtils.setField(pendingHistory, "id", 10L);
         CarInsuranceContractStat existing = new CarInsuranceContractStat(
             apiInfo,
             "202401",
@@ -72,38 +71,22 @@ class CarInsuranceContractStatServiceTest {
             "{}"
         );
 
-        when(apiInfoRepository.findByApiNameAndUseYnTrue(CarInsuranceContractStatService.API_NAME)).thenReturn(Optional.of(apiInfo));
-        when(apiCallHistoryAuditService.createPending(any(), any(), any())).thenReturn(pendingHistory);
-        when(carInsuranceContractApiClient.fetch("202401", "202401")).thenReturn(List.of(
-            new CarInsuranceContractExternalItem(
-                "202401",
-                "개인용",
-                "대인배상1",
-                GenderType.MALE,
-                "20대 이하",
-                "외산",
-                "중형",
-                10L,
-                new BigDecimal("10000.00"),
-                "{}"
-            )
-        ));
         when(carInsuranceContractStatRepository.findByBaseYmBetweenOrderByBaseYmAsc("202401", "202401"))
             .thenReturn(List.of(existing));
 
-        CarInsuranceContractStatResponse response = carInsuranceContractStatService.getContractStats(
+        CarInsuranceContractStatResponse response = carInsuranceContractStatService.getStoredContractStats(
             new CarInsuranceContractStatQueryRequest("202401", "202401")
         );
 
         assertThat(response.totalCount()).isEqualTo(1);
         assertThat(response.items().get(0).insuranceType()).isEqualTo("개인용");
-        verify(carInsuranceContractApiClient).fetch("202401", "202401");
-        verify(carInsuranceContractStatRepository).upsertAll(any());
-        verify(apiCallHistoryAuditService).recordSuccess(10L, 200, "fetched contract statistics");
+        verify(carInsuranceContractApiClient, never()).fetch(any(), any());
+        verify(carInsuranceContractStatRepository, never()).upsertAll(any());
+        verify(apiCallHistoryAuditService, never()).createPending(any(), any(), any());
     }
 
     @Test
-    void fetchesExternalDataAndCompletesHistory() {
+    void refreshStatsFetchesExternalDataAndCompletesHistory() {
         ApiInfo apiInfo = new ApiInfo(CarInsuranceContractStatService.API_NAME, "금융위원회", "http://example.com", 5000);
         ApiCallHistory pendingHistory = new ApiCallHistory(apiInfo, null, "fromYm=202401,toYm=202401");
         ReflectionTestUtils.setField(pendingHistory, "id", 1L);
@@ -140,7 +123,7 @@ class CarInsuranceContractStatServiceTest {
         when(carInsuranceContractStatRepository.findByBaseYmBetweenOrderByBaseYmAsc("202401", "202401"))
             .thenReturn(List.of(savedStat));
 
-        CarInsuranceContractStatResponse response = carInsuranceContractStatService.getContractStats(
+        CarInsuranceContractStatResponse response = carInsuranceContractStatService.refreshContractStats(
             new CarInsuranceContractStatQueryRequest("202401", "202401")
         );
 
