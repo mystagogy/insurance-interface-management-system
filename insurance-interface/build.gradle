@@ -31,6 +31,16 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) {
+        def macClassifier = System.getProperty('os.arch').toLowerCase().contains('aarch64') ||
+            System.getProperty('os.arch').toLowerCase().contains('arm64') ? 'osx-aarch_64' : 'osx-x86_64'
+        runtimeOnly('io.netty:netty-resolver-dns-native-macos') {
+            artifact {
+                classifier = macClassifier
+            }
+        }
+    }
 }
 
 tasks.named('test') {

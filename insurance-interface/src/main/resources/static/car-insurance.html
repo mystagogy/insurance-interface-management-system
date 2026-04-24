@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자동차보험 조회</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --page-bg-start: #f4f8ff;
+            --page-bg-end: #dde7f5;
+            --panel-bg: #ffffff;
+            --border-color: #d3dceb;
+            --text-main: #1f2937;
+            --text-sub: #5f6b7a;
+            --accent: #2f6fd6;
+            --danger: #c62f2f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background: linear-gradient(165deg, var(--page-bg-start), var(--page-bg-end));
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--text-sub);
+            font-size: 0.93rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            border: 1px solid var(--border-color);
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .button.primary {
+            border: 0;
+            background: linear-gradient(135deg, var(--accent), #1d57b5);
+            color: #fff;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 8px 20px rgba(35, 50, 80, 0.08);
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .field input {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            min-width: 140px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .summary-chip {
+            border: 1px solid #dce5f3;
+            background: #f8fbff;
+            color: #334155;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 11px;
+            border-bottom: 1px solid #e8edf5;
+            text-align: left;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--text-sub);
+            font-weight: 700;
+            background: #f9fbff;
+            position: sticky;
+            top: 0;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            max-height: 64vh;
+            border: 1px solid #e8edf5;
+            border-radius: 10px;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 22px;
+        }
+
+        .message {
+            margin-top: 10px;
+            min-height: 18px;
+            color: var(--danger);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 740px) {
+            .container {
+                padding: 18px 14px 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div>
+            <h1 class="title">자동차보험 계약 통계 조회</h1>
+            <p class="subtitle">외부 API 동기화 후 기간별 통계를 조회합니다.</p>
+        </div>
+        <div class="actions">
+            <a class="button" href="/swagger-ui/index.html" target="_blank" rel="noopener">Swagger</a>
+            <button class="button" type="button" id="resetButton">초기화</button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="filters">
+            <div class="field">
+                <label for="fromYm">fromYm (yyyyMM)</label>
+                <input id="fromYm" type="text" inputmode="numeric" maxlength="6" placeholder="202601">
+            </div>
+            <div class="field">
+                <label for="toYm">toYm (yyyyMM)</label>
+                <input id="toYm" type="text" inputmode="numeric" maxlength="6" placeholder="202603">
+            </div>
+            <button class="button primary" type="button" id="searchButton">조회</button>
+        </div>
+
+        <div class="summary" id="summaryChips">
+            <span class="summary-chip">조회 기간: -</span>
+            <span class="summary-chip">총 건수: -</span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>기준년월</th>
+                    <th>보험유형</th>
+                    <th>담보유형</th>
+                    <th>성별</th>
+                    <th>연령대</th>
+                    <th>차량구분</th>
+                    <th>차종</th>
+                    <th>계약건수</th>
+                    <th>경과보험료</th>
+                </tr>
+                </thead>
+                <tbody id="resultBody">
+                <tr>
+                    <td colspan="9" class="empty">조회 조건을 입력 후 실행하세요.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="message" id="message"></p>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const fromYmInput = document.getElementById("fromYm");
+        const toYmInput = document.getElementById("toYm");
+        const searchButton = document.getElementById("searchButton");
+        const resetButton = document.getElementById("resetButton");
+        const messageEl = document.getElementById("message");
+        const resultBody = document.getElementById("resultBody");
+        const summaryChips = document.getElementById("summaryChips");
+
+        setDefaultPeriod();
+
+        searchButton.addEventListener("click", loadStats);
+        resetButton.addEventListener("click", function () {
+            setDefaultPeriod();
+            renderSummary("-", "-");
+            renderEmpty("조회 조건을 입력 후 실행하세요.");
+            messageEl.textContent = "";
+        });
+
+        async function loadStats() {
+            messageEl.textContent = "";
+            searchButton.disabled = true;
+
+            const fromYm = fromYmInput.value.trim();
+            const toYm = toYmInput.value.trim();
+
+            const fromDate = parseYearMonth(fromYm);
+            const toDate = parseYearMonth(toYm);
+
+            if (!fromDate || !toDate) {
+                messageEl.textContent = "조회 기간은 yyyyMM 형식(유효한 월)으로 입력해야 합니다.";
+                renderEmpty("입력값을 확인하세요.");
+                searchButton.disabled = false;
+                return;
+            }
+
+            if (fromYm > toYm) {
+                messageEl.textContent = "조회 시작년월은 종료년월보다 늦을 수 없습니다.";
+                renderEmpty("입력값을 확인하세요.");
+                searchButton.disabled = false;
+                return;
+            }
+
+            try {
+                const query = new URLSearchParams({fromYm: fromYm, toYm: toYm});
+                const response = await fetch("/api/v1/stats/car-insurance/contracts?" + query.toString(), {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+
+                if (response.status === 401) {
+                    window.location.replace("/login?required=true&next=/car-insurance");
+                    return;
+                }
+
+                const payload = await response.json();
+                if (!response.ok || !payload.success || !payload.data || !Array.isArray(payload.data.items)) {
+                    messageEl.textContent = payload.error?.message || "자동차보험 조회에 실패했습니다.";
+                    renderEmpty("데이터를 불러오지 못했습니다.");
+                    return;
+                }
+
+                renderSummary(payload.data.fromYm, payload.data.totalCount);
+                renderRows(payload.data.items);
+            } catch (error) {
+                messageEl.textContent = "조회 중 오류가 발생했습니다.";
+                renderEmpty("데이터를 불러오지 못했습니다.");
+            } finally {
+                searchButton.disabled = false;
+            }
+        }
+
+        function setDefaultPeriod() {
+            const today = new Date();
+            const toYm = formatYearMonth(today);
+            const fromBase = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+            const fromYm = formatYearMonth(fromBase);
+            fromYmInput.value = fromYm;
+            toYmInput.value = toYm;
+        }
+
+        function formatYearMonth(date) {
+            return String(date.getFullYear()) + String(date.getMonth() + 1).padStart(2, "0");
+        }
+
+        function parseYearMonth(value) {
+            if (!/^\d{6}$/.test(value)) {
+                return null;
+            }
+            const year = Number(value.substring(0, 4));
+            const month = Number(value.substring(4, 6));
+            if (month < 1 || month > 12) {
+                return null;
+            }
+            return new Date(year, month - 1, 1);
+        }
+
+        function renderSummary(fromYm, totalCount) {
+            const from = escapeHtml(String(fromYm));
+            const to = escapeHtml(toYmInput.value.trim() || "-");
+            const total = typeof totalCount === "number" ? formatNumber(totalCount) : "-";
+            summaryChips.innerHTML = [
+                "<span class=\"summary-chip\">조회 기간: " + from + " ~ " + to + "</span>",
+                "<span class=\"summary-chip\">총 건수: " + total + "</span>"
+            ].join("");
+        }
+
+        function renderRows(items) {
+            if (items.length === 0) {
+                renderEmpty("조회된 데이터가 없습니다.");
+                return;
+            }
+
+            resultBody.innerHTML = items.map(function (item) {
+                return [
+                    "<tr>",
+                    "<td>" + escapeHtml(item.baseYm) + "</td>",
+                    "<td>" + escapeHtml(item.insuranceType) + "</td>",
+                    "<td>" + escapeHtml(item.coverageType) + "</td>",
+                    "<td>" + escapeHtml(item.gender) + "</td>",
+                    "<td>" + escapeHtml(item.ageGroup) + "</td>",
+                    "<td>" + escapeHtml(item.carOriginType) + "</td>",
+                    "<td>" + escapeHtml(item.carType) + "</td>",
+                    "<td>" + formatNumber(item.contractCount) + "</td>",
+                    "<td>" + formatMoney(item.earnedPremium) + "</td>",
+                    "</tr>"
+                ].join("");
+            }).join("");
+        }
+
+        function renderEmpty(message) {
+            resultBody.innerHTML = "<tr><td colspan=\"9\" class=\"empty\">" + escapeHtml(message) + "</td></tr>";
+        }
+
+        function formatNumber(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) {
+                return "-";
+            }
+            return new Intl.NumberFormat("ko-KR").format(number);
+        }
+
+        function formatMoney(value) {
+            if (value === null || value === undefined || value === "") {
+                return "-";
+            }
+            const number = Number(value);
+            if (!Number.isFinite(number)) {
+                return escapeHtml(String(value));
+            }
+            return new Intl.NumberFormat("ko-KR", {maximumFractionDigits: 0}).format(number);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll("\"", "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+    })();
+</script>
+</body>
+</html>
