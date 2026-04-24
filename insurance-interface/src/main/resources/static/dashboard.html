@@ -45,6 +45,13 @@
             margin-bottom: 18px;
         }
 
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .title {
             margin: 0;
             font-size: 1.5rem;
@@ -191,7 +198,10 @@
             <h1 class="title">운영자 대시보드</h1>
             <p class="subtitle">오늘 호출 현황과 실패 상태를 빠르게 확인합니다.</p>
         </div>
-        <button class="button" id="logoutButton" type="button">로그아웃</button>
+        <div class="top-actions">
+            <a class="button" href="/swagger-ui/index.html" target="_blank" rel="noopener">Swagger 열기</a>
+            <button class="button" id="logoutButton" type="button">로그아웃</button>
+        </div>
     </header>
 
     <section class="card-grid">
@@ -223,8 +233,8 @@
         <p class="meta">빠른 작업</p>
         <div class="actions">
             <a class="button primary" href="/car-insurance">자동차보험 조회</a>
+            <a class="button primary" href="/life-insurance">생명보험 조회</a>
             <a class="button primary" href="/history">호출 이력 보기</a>
-            <a class="button" href="/swagger-ui/index.html" target="_blank" rel="noopener">Swagger 열기</a>
         </div>
         <p class="message" id="message"></p>
     </section>

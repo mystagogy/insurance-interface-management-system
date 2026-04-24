@@ -53,7 +53,7 @@ public abstract class AbstractAuditedStatService {
         return value == null || value.isBlank() ? defaultValue : value;
     }
 
-    private ApiInfo findApiInfo(String apiName, String apiNotFoundMessage) {
+    protected final ApiInfo findApiInfo(String apiName, String apiNotFoundMessage) {
         return apiInfoRepository.findByApiNameAndUseYnTrue(apiName)
             .orElseThrow(() -> new IllegalStateException(apiNotFoundMessage));
     }
