@@ -80,6 +80,12 @@
             color: #fff;
         }
 
+        .button.secondary {
+            border: 1px solid #8ea4ca;
+            background: #eef4ff;
+            color: #1d3f79;
+        }
+
         .panel {
             background: var(--panel-bg);
             border: 1px solid var(--border-color);
@@ -187,7 +193,7 @@
     <header class="header">
         <div>
             <h1 class="title">자동차보험 계약 통계 조회</h1>
-            <p class="subtitle">외부 API 동기화 후 기간별 통계를 조회합니다.</p>
+            <p class="subtitle">저장 데이터 조회 또는 외부 데이터 동기화 후 조회를 선택할 수 있습니다.</p>
         </div>
         <div class="actions">
             <a class="button" href="/swagger-ui/index.html" target="_blank" rel="noopener">Swagger</a>
@@ -206,6 +212,7 @@
                 <input id="toYm" type="text" inputmode="numeric" maxlength="6" placeholder="202603">
             </div>
             <button class="button primary" type="button" id="searchButton">조회</button>
+            <button class="button secondary" type="button" id="syncButton">데이터 가져오기</button>
         </div>
 
         <div class="summary" id="summaryChips">
@@ -244,6 +251,7 @@
         const fromYmInput = document.getElementById("fromYm");
         const toYmInput = document.getElementById("toYm");
         const searchButton = document.getElementById("searchButton");
+        const syncButton = document.getElementById("syncButton");
         const resetButton = document.getElementById("resetButton");
         const messageEl = document.getElementById("message");
         const resultBody = document.getElementById("resultBody");
@@ -251,17 +259,23 @@
 
         setDefaultPeriod();
 
-        searchButton.addEventListener("click", loadStats);
+        searchButton.addEventListener("click", function () {
+            loadStats(false);
+        });
+        syncButton.addEventListener("click", function () {
+            loadStats(true);
+        });
         resetButton.addEventListener("click", function () {
             setDefaultPeriod();
-            renderSummary("-", "-");
+            renderSummary("-", "-", "-");
             renderEmpty("조회 조건을 입력 후 실행하세요.");
             messageEl.textContent = "";
         });
 
-        async function loadStats() {
+        async function loadStats(sync) {
             messageEl.textContent = "";
             searchButton.disabled = true;
+            syncButton.disabled = true;
 
             const fromYm = fromYmInput.value.trim();
             const toYm = toYmInput.value.trim();
@@ -273,6 +287,7 @@
                 messageEl.textContent = "조회 기간은 yyyyMM 형식(유효한 월)으로 입력해야 합니다.";
                 renderEmpty("입력값을 확인하세요.");
                 searchButton.disabled = false;
+                syncButton.disabled = false;
                 return;
             }
 
@@ -280,11 +295,15 @@
                 messageEl.textContent = "조회 시작년월은 종료년월보다 늦을 수 없습니다.";
                 renderEmpty("입력값을 확인하세요.");
                 searchButton.disabled = false;
+                syncButton.disabled = false;
                 return;
             }
 
             try {
                 const query = new URLSearchParams({fromYm: fromYm, toYm: toYm});
+                if (sync) {
+                    query.set("sync", "true");
+                }
                 const response = await fetch("/api/v1/stats/car-insurance/contracts?" + query.toString(), {
                     method: "GET",
                     credentials: "same-origin"
@@ -302,13 +321,16 @@
                     return;
                 }
 
-                renderSummary(payload.data.fromYm, payload.data.totalCount);
+                const resolvedFromYm = payload.data.fromYm || fromYm;
+                const resolvedToYm = payload.data.toYm || toYm;
+                renderSummary(resolvedFromYm, resolvedToYm, payload.data.totalCount);
                 renderRows(payload.data.items);
             } catch (error) {
                 messageEl.textContent = "조회 중 오류가 발생했습니다.";
                 renderEmpty("데이터를 불러오지 못했습니다.");
             } finally {
                 searchButton.disabled = false;
+                syncButton.disabled = false;
             }
         }
 
@@ -337,9 +359,9 @@
             return new Date(year, month - 1, 1);
         }
 
-        function renderSummary(fromYm, totalCount) {
+        function renderSummary(fromYm, toYm, totalCount) {
             const from = escapeHtml(String(fromYm));
-            const to = escapeHtml(toYmInput.value.trim() || "-");
+            const to = escapeHtml(String(toYm));
             const total = typeof totalCount === "number" ? formatNumber(totalCount) : "-";
             summaryChips.innerHTML = [
                 "<span class=\"summary-chip\">조회 기간: " + from + " ~ " + to + "</span>",
