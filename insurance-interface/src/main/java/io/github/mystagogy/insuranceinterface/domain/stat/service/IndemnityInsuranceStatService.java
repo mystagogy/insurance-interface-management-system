@@ -49,10 +49,18 @@ public class IndemnityInsuranceStatService extends AbstractAuditedStatService {
     }
 
     /**
-     * 실손보험 가입 통계를 조회한다.
-     * 항상 외부 API를 호출해 최신 데이터를 동기화한 뒤, 저장된 통계를 응답으로 반환한다.
+     * 저장된 실손보험 가입 통계를 조회한다.
      */
-    public IndemnityInsuranceStatResponse getSubscriptionStats(IndemnityInsuranceStatQueryRequest request) {
+    public IndemnityInsuranceStatResponse getStoredSubscriptionStats(IndemnityInsuranceStatQueryRequest request) {
+        validatePeriod(request);
+        ApiInfo apiInfo = findApiInfo();
+        return toResponse(request, loadStats(request, apiInfo));
+    }
+
+    /**
+     * 실손보험 가입 통계를 외부 API로 동기화한 뒤 조회한다.
+     */
+    public IndemnityInsuranceStatResponse refreshSubscriptionStats(IndemnityInsuranceStatQueryRequest request) {
         validatePeriod(request);
         return executeWithAudit(
             API_NAME,
@@ -65,6 +73,13 @@ public class IndemnityInsuranceStatService extends AbstractAuditedStatService {
             },
             this::handleFailure
         );
+    }
+
+    /**
+     * 하위 호환을 위한 기존 메서드.
+     */
+    public IndemnityInsuranceStatResponse getSubscriptionStats(IndemnityInsuranceStatQueryRequest request) {
+        return refreshSubscriptionStats(request);
     }
 
     /**
@@ -90,6 +105,10 @@ public class IndemnityInsuranceStatService extends AbstractAuditedStatService {
             from.atDay(1),
             to.atEndOfMonth()
         );
+    }
+
+    private ApiInfo findApiInfo() {
+        return findApiInfo(API_NAME, "실손보험 가입정보 API 설정을 찾을 수 없습니다.");
     }
 
     /**

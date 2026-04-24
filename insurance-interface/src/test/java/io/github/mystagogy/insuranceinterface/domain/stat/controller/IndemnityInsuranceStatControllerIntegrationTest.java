@@ -73,7 +73,7 @@ class IndemnityInsuranceStatControllerIntegrationTest {
     }
 
     @Test
-    void authenticatedRequestReturnsIndemnityInsuranceStats() throws Exception {
+    void authenticatedRequestReturnsStoredIndemnityInsuranceStatsByDefault() throws Exception {
         MockHttpSession session = loginSession();
         IndemnityInsuranceStatResponse response = new IndemnityInsuranceStatResponse(
             "202401",
@@ -88,7 +88,7 @@ class IndemnityInsuranceStatControllerIntegrationTest {
                 new BigDecimal("12345")
             ))
         );
-        when(indemnityInsuranceStatService.getSubscriptionStats(eq(new IndemnityInsuranceStatQueryRequest("202401", "202401"))))
+        when(indemnityInsuranceStatService.getStoredSubscriptionStats(eq(new IndemnityInsuranceStatQueryRequest("202401", "202401"))))
             .thenReturn(response);
 
         mockMvc.perform(
@@ -109,7 +109,40 @@ class IndemnityInsuranceStatControllerIntegrationTest {
             .andExpect(jsonPath("$.data.items[0].coverageItem").value("질병"))
             .andExpect(jsonPath("$.data.items[0].premiumAmount").value(12345));
 
-        verify(indemnityInsuranceStatService).getSubscriptionStats(new IndemnityInsuranceStatQueryRequest("202401", "202401"));
+        verify(indemnityInsuranceStatService).getStoredSubscriptionStats(new IndemnityInsuranceStatQueryRequest("202401", "202401"));
+    }
+
+    @Test
+    void authenticatedRequestWithSyncTrueRefreshesAndReturnsIndemnityInsuranceStats() throws Exception {
+        MockHttpSession session = loginSession();
+        IndemnityInsuranceStatResponse response = new IndemnityInsuranceStatResponse(
+            "202401",
+            "202401",
+            1,
+            List.of(new IndemnityInsuranceStatItemResponse(
+                LocalDate.of(2024, 1, 1),
+                "40",
+                "남자",
+                "4세대 실손의료보험",
+                "질병",
+                new BigDecimal("12345")
+            ))
+        );
+        when(indemnityInsuranceStatService.refreshSubscriptionStats(eq(new IndemnityInsuranceStatQueryRequest("202401", "202401"))))
+            .thenReturn(response);
+
+        mockMvc.perform(
+                get("/api/v1/stats/indemnity-insurance/subscriptions")
+                    .param("fromYm", "202401")
+                    .param("toYm", "202401")
+                    .param("sync", "true")
+                    .session(session)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.totalCount").value(1));
+
+        verify(indemnityInsuranceStatService).refreshSubscriptionStats(new IndemnityInsuranceStatQueryRequest("202401", "202401"));
     }
 
     @Test

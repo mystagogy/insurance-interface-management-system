@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +56,40 @@ class IndemnityInsuranceStatServiceTest {
     private IndemnityInsuranceStatService indemnityInsuranceStatService;
 
     @Test
-    void requestAlwaysFetchesExternalDataEvenWhenStatsAlreadyExist() {
+    void getStoredSubscriptionStatsReturnsSavedDataWithoutExternalCall() {
+        ApiInfo apiInfo = new ApiInfo(IndemnityInsuranceStatService.API_NAME, "금융위원회", "http://example.com", 5000);
+        IndemnityInsuranceStat existing = new IndemnityInsuranceStat(
+            apiInfo,
+            LocalDate.of(2024, 1, 1),
+            "40",
+            GenderType.MALE,
+            "4세대 실손의료보험",
+            "질병",
+            new BigDecimal("12345"),
+            "{}"
+        );
+
+        when(apiInfoRepository.findByApiNameAndUseYnTrue(IndemnityInsuranceStatService.API_NAME)).thenReturn(Optional.of(apiInfo));
+        when(indemnityInsuranceStatRepository.findStats(
+            apiInfo,
+            LocalDate.of(2024, 1, 1),
+            LocalDate.of(2024, 1, 31)
+        )).thenReturn(List.of(existing));
+
+        IndemnityInsuranceStatResponse response = indemnityInsuranceStatService.getStoredSubscriptionStats(
+            new IndemnityInsuranceStatQueryRequest("202401", "202401")
+        );
+
+        assertThat(response.totalCount()).isEqualTo(1);
+        assertThat(response.items().get(0).indemnityType()).isEqualTo("4세대 실손의료보험");
+        assertThat(response.items().get(0).coverageItem()).isEqualTo("질병");
+        verify(indemnityInsuranceApiClient, never()).fetch(any(), any());
+        verify(indemnityInsuranceStatRepository, never()).upsertAll(any());
+        verify(apiCallHistoryAuditService, never()).createPending(any(), any(), any());
+    }
+
+    @Test
+    void refreshSubscriptionStatsFetchesExternalDataAndCompletesHistory() {
         ApiInfo apiInfo = new ApiInfo(IndemnityInsuranceStatService.API_NAME, "금융위원회", "http://example.com", 5000);
         ApiCallHistory pendingHistory = new ApiCallHistory(apiInfo, null, "fromYm=202401,toYm=202401");
         ReflectionTestUtils.setField(pendingHistory, "id", 10L);
@@ -89,13 +123,11 @@ class IndemnityInsuranceStatServiceTest {
             LocalDate.of(2024, 1, 31)
         )).thenReturn(List.of(existing));
 
-        IndemnityInsuranceStatResponse response = indemnityInsuranceStatService.getSubscriptionStats(
+        IndemnityInsuranceStatResponse response = indemnityInsuranceStatService.refreshSubscriptionStats(
             new IndemnityInsuranceStatQueryRequest("202401", "202401")
         );
 
         assertThat(response.totalCount()).isEqualTo(1);
-        assertThat(response.items().get(0).indemnityType()).isEqualTo("4세대 실손의료보험");
-        assertThat(response.items().get(0).coverageItem()).isEqualTo("질병");
         verify(indemnityInsuranceApiClient).fetch("202401", "202401");
         verify(indemnityInsuranceStatRepository).upsertAll(any());
         verify(apiCallHistoryAuditService).recordSuccess(10L, 200, "fetched indemnity insurance subscription statistics");
