@@ -73,7 +73,7 @@ class LifeInsuranceStatControllerIntegrationTest {
     }
 
     @Test
-    void authenticatedRequestReturnsLifeInsuranceStats() throws Exception {
+    void authenticatedRequestReturnsStoredLifeInsuranceStatsByDefault() throws Exception {
         MockHttpSession session = loginSession();
         LifeInsuranceStatResponse response = new LifeInsuranceStatResponse(
             "2023",
@@ -89,7 +89,7 @@ class LifeInsuranceStatControllerIntegrationTest {
                 new BigDecimal("0.1234")
             ))
         );
-        when(lifeInsuranceStatService.getSubscriptionStats(eq(new LifeInsuranceStatQueryRequest("2023", "2023"))))
+        when(lifeInsuranceStatService.getStoredSubscriptionStats(eq(new LifeInsuranceStatQueryRequest("2023", "2023"))))
             .thenReturn(response);
 
         mockMvc.perform(
@@ -109,7 +109,41 @@ class LifeInsuranceStatControllerIntegrationTest {
             .andExpect(jsonPath("$.data.items[0].subscriptionCount").value(100))
             .andExpect(jsonPath("$.data.items[0].subscriptionRate").value(0.1234));
 
-        verify(lifeInsuranceStatService).getSubscriptionStats(new LifeInsuranceStatQueryRequest("2023", "2023"));
+        verify(lifeInsuranceStatService).getStoredSubscriptionStats(new LifeInsuranceStatQueryRequest("2023", "2023"));
+    }
+
+    @Test
+    void authenticatedRequestWithSyncTrueRefreshesAndReturnsLifeInsuranceStats() throws Exception {
+        MockHttpSession session = loginSession();
+        LifeInsuranceStatResponse response = new LifeInsuranceStatResponse(
+            "2023",
+            "2023",
+            1,
+            List.of(new LifeInsuranceStatItemResponse(
+                LocalDate.of(2023, 1, 1),
+                "전국",
+                "40대",
+                "여자",
+                "종신보험",
+                100L,
+                new BigDecimal("0.1234")
+            ))
+        );
+        when(lifeInsuranceStatService.refreshSubscriptionStats(eq(new LifeInsuranceStatQueryRequest("2023", "2023"))))
+            .thenReturn(response);
+
+        mockMvc.perform(
+                get("/api/v1/stats/life-insurance/subscriptions")
+                    .param("fromYear", "2023")
+                    .param("toYear", "2023")
+                    .param("sync", "true")
+                    .session(session)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.totalCount").value(1));
+
+        verify(lifeInsuranceStatService).refreshSubscriptionStats(new LifeInsuranceStatQueryRequest("2023", "2023"));
     }
 
     @Test

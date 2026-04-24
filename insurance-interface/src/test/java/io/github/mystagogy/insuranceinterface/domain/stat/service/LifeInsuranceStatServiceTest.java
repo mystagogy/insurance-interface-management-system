@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +56,41 @@ class LifeInsuranceStatServiceTest {
     private LifeInsuranceStatService lifeInsuranceStatService;
 
     @Test
-    void requestAlwaysFetchesExternalDataEvenWhenStatsAlreadyExist() {
+    void getStoredSubscriptionStatsReturnsSavedDataWithoutExternalCall() {
+        ApiInfo apiInfo = new ApiInfo(LifeInsuranceStatService.API_NAME, "금융위원회", "http://example.com", 5000);
+        LifeInsuranceStat existing = new LifeInsuranceStat(
+            apiInfo,
+            LocalDate.of(2023, 1, 1),
+            "전국",
+            "40대",
+            GenderType.FEMALE,
+            "종신보험",
+            100L,
+            new BigDecimal("0.1234"),
+            "{}"
+        );
+
+        when(apiInfoRepository.findByApiNameAndUseYnTrue(LifeInsuranceStatService.API_NAME)).thenReturn(Optional.of(apiInfo));
+        when(lifeInsuranceStatRepository.findStats(
+            apiInfo,
+            LocalDate.of(2023, 1, 1),
+            LocalDate.of(2023, 12, 31)
+        )).thenReturn(List.of(existing));
+
+        LifeInsuranceStatResponse response = lifeInsuranceStatService.getStoredSubscriptionStats(
+            new LifeInsuranceStatQueryRequest("2023", "2023")
+        );
+
+        assertThat(response.totalCount()).isEqualTo(1);
+        assertThat(response.items().get(0).insuranceType()).isEqualTo("종신보험");
+        assertThat(response.items().get(0).areaName()).isEqualTo("전국");
+        verify(lifeInsuranceApiClient, never()).fetch(any(), any());
+        verify(lifeInsuranceStatRepository, never()).upsertAll(any());
+        verify(apiCallHistoryAuditService, never()).createPending(any(), any(), any());
+    }
+
+    @Test
+    void refreshSubscriptionStatsFetchesExternalDataAndCompletesHistory() {
         ApiInfo apiInfo = new ApiInfo(LifeInsuranceStatService.API_NAME, "금융위원회", "http://example.com", 5000);
         ApiCallHistory pendingHistory = new ApiCallHistory(apiInfo, null, "fromYear=2023,toYear=2023");
         ReflectionTestUtils.setField(pendingHistory, "id", 10L);
@@ -91,13 +126,11 @@ class LifeInsuranceStatServiceTest {
             LocalDate.of(2023, 12, 31)
         )).thenReturn(List.of(existing));
 
-        LifeInsuranceStatResponse response = lifeInsuranceStatService.getSubscriptionStats(
+        LifeInsuranceStatResponse response = lifeInsuranceStatService.refreshSubscriptionStats(
             new LifeInsuranceStatQueryRequest("2023", "2023")
         );
 
         assertThat(response.totalCount()).isEqualTo(1);
-        assertThat(response.items().get(0).insuranceType()).isEqualTo("종신보험");
-        assertThat(response.items().get(0).areaName()).isEqualTo("전국");
         verify(lifeInsuranceApiClient).fetch("2023", "2023");
         verify(lifeInsuranceStatRepository).upsertAll(any());
         verify(apiCallHistoryAuditService).recordSuccess(10L, 200, "fetched life insurance subscription statistics");

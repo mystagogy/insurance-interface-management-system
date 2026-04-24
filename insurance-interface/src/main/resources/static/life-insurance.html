@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생명보험 조회</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --page-bg-start: #f4f8ff;
+            --page-bg-end: #dde7f5;
+            --panel-bg: #ffffff;
+            --border-color: #d3dceb;
+            --text-main: #1f2937;
+            --text-sub: #5f6b7a;
+            --accent: #2f6fd6;
+            --danger: #c62f2f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background: linear-gradient(165deg, var(--page-bg-start), var(--page-bg-end));
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--text-sub);
+            font-size: 0.93rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            border: 1px solid var(--border-color);
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .button.primary {
+            border: 0;
+            background: linear-gradient(135deg, var(--accent), #1d57b5);
+            color: #fff;
+        }
+
+        .button.secondary {
+            border: 1px solid #8ea4ca;
+            background: #eef4ff;
+            color: #1d3f79;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 8px 20px rgba(35, 50, 80, 0.08);
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .field input {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            min-width: 140px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .summary-chip {
+            border: 1px solid #dce5f3;
+            background: #f8fbff;
+            color: #334155;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 11px;
+            border-bottom: 1px solid #e8edf5;
+            text-align: left;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--text-sub);
+            font-weight: 700;
+            background: #f9fbff;
+            position: sticky;
+            top: 0;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            max-height: 64vh;
+            border: 1px solid #e8edf5;
+            border-radius: 10px;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 22px;
+        }
+
+        .message {
+            margin-top: 10px;
+            min-height: 18px;
+            color: var(--danger);
+            font-size: 0.9rem;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 26, 43, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal {
+            width: min(760px, 100%);
+            max-height: 80vh;
+            overflow: auto;
+            background: #ffffff;
+            border: 1px solid #d3dceb;
+            border-radius: 14px;
+            box-shadow: 0 18px 38px rgba(22, 34, 56, 0.26);
+            padding: 14px;
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .modal-sub {
+            margin: 0;
+            color: var(--text-sub);
+            font-size: 0.83rem;
+        }
+
+        @media (max-width: 740px) {
+            .container {
+                padding: 18px 14px 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div>
+            <h1 class="title">생명보험 가입 통계 조회</h1>
+            <p class="subtitle">저장 데이터 조회 또는 외부 데이터 동기화 후 조회를 선택할 수 있습니다.</p>
+        </div>
+        <div class="actions">
+            <a class="button" href="/dashboard">대시보드</a>
+            <button class="button" type="button" id="recentHistoryButton">최근 호출 이력</button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="filters">
+            <div class="field">
+                <label for="fromYear">fromYear (yyyy)</label>
+                <input id="fromYear" type="text" inputmode="numeric" maxlength="4" placeholder="2023">
+            </div>
+            <div class="field">
+                <label for="toYear">toYear (yyyy)</label>
+                <input id="toYear" type="text" inputmode="numeric" maxlength="4" placeholder="2024">
+            </div>
+            <button class="button primary" type="button" id="searchButton">조회</button>
+            <button class="button secondary" type="button" id="syncButton">데이터 가져오기</button>
+        </div>
+
+        <div class="summary" id="summaryChips">
+            <span class="summary-chip">조회 기간: -</span>
+            <span class="summary-chip">총 건수: -</span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>기준일자</th>
+                    <th>지역</th>
+                    <th>연령대</th>
+                    <th>성별</th>
+                    <th>보험유형</th>
+                    <th>가입건수</th>
+                    <th>가입률</th>
+                </tr>
+                </thead>
+                <tbody id="resultBody">
+                <tr>
+                    <td colspan="7" class="empty">조회 조건을 입력 후 실행하세요.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="message" id="message"></p>
+    </section>
+</div>
+
+<div class="modal-backdrop" id="historyModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <div class="modal-head">
+            <div>
+                <h2 class="modal-title" id="historyModalTitle">생명보험 최근 호출 이력</h2>
+                <p class="modal-sub">최근 7일 호출 중 생명보험 조회 건만 표시합니다.</p>
+            </div>
+            <button class="button" type="button" id="closeHistoryModalButton">닫기</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>요청 ID</th>
+                    <th>상태</th>
+                </tr>
+                </thead>
+                <tbody id="historyModalBody">
+                <tr>
+                    <td colspan="2" class="empty">최근 호출 이력을 불러오는 중입니다.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const LIFE_INTERFACE_NAME = "생명보험 가입 통계 조회";
+        const fromYearInput = document.getElementById("fromYear");
+        const toYearInput = document.getElementById("toYear");
+        const searchButton = document.getElementById("searchButton");
+        const syncButton = document.getElementById("syncButton");
+        const recentHistoryButton = document.getElementById("recentHistoryButton");
+        const messageEl = document.getElementById("message");
+        const resultBody = document.getElementById("resultBody");
+        const summaryChips = document.getElementById("summaryChips");
+        const historyModal = document.getElementById("historyModal");
+        const closeHistoryModalButton = document.getElementById("closeHistoryModalButton");
+        const historyModalBody = document.getElementById("historyModalBody");
+
+        setDefaultPeriod();
+
+        searchButton.addEventListener("click", function () {
+            loadStats(false);
+        });
+        syncButton.addEventListener("click", function () {
+            loadStats(true);
+        });
+        recentHistoryButton.addEventListener("click", openHistoryModal);
+        closeHistoryModalButton.addEventListener("click", closeHistoryModal);
+        historyModal.addEventListener("click", function (event) {
+            if (event.target === historyModal) {
+                closeHistoryModal();
+            }
+        });
+
+        async function loadStats(sync) {
+            messageEl.textContent = "";
+            searchButton.disabled = true;
+            syncButton.disabled = true;
+
+            const fromYear = fromYearInput.value.trim();
+            const toYear = toYearInput.value.trim();
+
+            if (!/^\d{4}$/.test(fromYear) || !/^\d{4}$/.test(toYear)) {
+                messageEl.textContent = "조회 기간은 yyyy 형식으로 입력해야 합니다.";
+                renderEmpty("입력값을 확인하세요.");
+                searchButton.disabled = false;
+                syncButton.disabled = false;
+                return;
+            }
+
+            if (fromYear > toYear) {
+                messageEl.textContent = "조회 시작년도는 종료년도보다 늦을 수 없습니다.";
+                renderEmpty("입력값을 확인하세요.");
+                searchButton.disabled = false;
+                syncButton.disabled = false;
+                return;
+            }
+
+            try {
+                const query = new URLSearchParams({fromYear: fromYear, toYear: toYear});
+                if (sync) {
+                    query.set("sync", "true");
+                }
+                const response = await fetch("/api/v1/stats/life-insurance/subscriptions?" + query.toString(), {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+
+                if (response.status === 401) {
+                    window.location.replace("/login?required=true&next=/life-insurance");
+                    return;
+                }
+
+                const payload = await response.json();
+                if (!response.ok || !payload.success || !payload.data || !Array.isArray(payload.data.items)) {
+                    messageEl.textContent = payload.error?.message || "생명보험 조회에 실패했습니다.";
+                    renderEmpty("데이터를 불러오지 못했습니다.");
+                    return;
+                }
+
+                const resolvedFromYear = payload.data.fromYear || fromYear;
+                const resolvedToYear = payload.data.toYear || toYear;
+                renderSummary(resolvedFromYear, resolvedToYear, payload.data.totalCount);
+                renderRows(payload.data.items);
+            } catch (error) {
+                messageEl.textContent = "조회 중 오류가 발생했습니다.";
+                renderEmpty("데이터를 불러오지 못했습니다.");
+            } finally {
+                searchButton.disabled = false;
+                syncButton.disabled = false;
+            }
+        }
+
+        function setDefaultPeriod() {
+            const year = String(new Date().getFullYear());
+            fromYearInput.value = year;
+            toYearInput.value = year;
+        }
+
+        function renderSummary(fromYear, toYear, totalCount) {
+            const from = escapeHtml(String(fromYear));
+            const to = escapeHtml(String(toYear));
+            const total = typeof totalCount === "number" ? formatNumber(totalCount) : "-";
+            summaryChips.innerHTML = [
+                "<span class=\"summary-chip\">조회 기간: " + from + " ~ " + to + "</span>",
+                "<span class=\"summary-chip\">총 건수: " + total + "</span>"
+            ].join("");
+        }
+
+        function renderRows(items) {
+            if (items.length === 0) {
+                renderEmpty("조회된 데이터가 없습니다.");
+                return;
+            }
+
+            resultBody.innerHTML = items.map(function (item) {
+                return [
+                    "<tr>",
+                    "<td>" + escapeHtml(item.statDate) + "</td>",
+                    "<td>" + escapeHtml(item.areaName) + "</td>",
+                    "<td>" + escapeHtml(item.ageGroup) + "</td>",
+                    "<td>" + escapeHtml(item.gender) + "</td>",
+                    "<td>" + escapeHtml(item.insuranceType) + "</td>",
+                    "<td>" + formatNumber(item.subscriptionCount) + "</td>",
+                    "<td>" + formatRate(item.subscriptionRate) + "</td>",
+                    "</tr>"
+                ].join("");
+            }).join("");
+        }
+
+        function renderEmpty(message) {
+            resultBody.innerHTML = "<tr><td colspan=\"7\" class=\"empty\">" + escapeHtml(message) + "</td></tr>";
+        }
+
+        async function openHistoryModal() {
+            historyModal.classList.add("open");
+            historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오는 중입니다.</td></tr>";
+            recentHistoryButton.disabled = true;
+            try {
+                const response = await fetch("/history/recent", {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+                if (response.status === 401) {
+                    window.location.replace("/login?required=true&next=/life-insurance");
+                    return;
+                }
+                const payload = await response.json();
+                if (!response.ok || !payload.success || !Array.isArray(payload.data)) {
+                    historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
+                    return;
+                }
+                const filtered = payload.data.filter(function (item) {
+                    return item.interfaceName === LIFE_INTERFACE_NAME;
+                });
+                renderHistoryRows(filtered);
+            } catch (error) {
+                historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
+            } finally {
+                recentHistoryButton.disabled = false;
+            }
+        }
+
+        function closeHistoryModal() {
+            historyModal.classList.remove("open");
+        }
+
+        function renderHistoryRows(items) {
+            if (items.length === 0) {
+                historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">생명보험 호출 이력이 없습니다.</td></tr>";
+                return;
+            }
+            historyModalBody.innerHTML = items.map(function (item) {
+                return [
+                    "<tr>",
+                    "<td>" + escapeHtml(item.requestId) + "</td>",
+                    "<td>" + escapeHtml(item.status) + "</td>",
+                    "</tr>"
+                ].join("");
+            }).join("");
+        }
+
+        function formatNumber(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) {
+                return "-";
+            }
+            return new Intl.NumberFormat("ko-KR").format(number);
+        }
+
+        function formatRate(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) {
+                return "-";
+            }
+            return (number * 100).toFixed(2) + "%";
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll("\"", "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+    })();
+</script>
+</body>
+</html>
