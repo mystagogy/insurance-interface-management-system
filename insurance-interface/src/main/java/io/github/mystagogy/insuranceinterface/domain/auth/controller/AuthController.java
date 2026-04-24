@@ -1,6 +1,7 @@
 package io.github.mystagogy.insuranceinterface.domain.auth.controller;
 
 import io.github.mystagogy.insuranceinterface.common.response.ApiResponse;
+import io.github.mystagogy.insuranceinterface.domain.auth.dto.CsrfTokenResponse;
 import io.github.mystagogy.insuranceinterface.domain.auth.dto.LoginRequest;
 import io.github.mystagogy.insuranceinterface.domain.auth.dto.LoginResponse;
 import io.github.mystagogy.insuranceinterface.domain.auth.dto.MyInfoResponse;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,5 +53,10 @@ public class AuthController {
     @GetMapping("/me")
     public ApiResponse<MyInfoResponse> myInfo() {
         return ApiResponse.ok(authService.myInfo());
+    }
+
+    @GetMapping("/csrf")
+    public ApiResponse<CsrfTokenResponse> csrf(CsrfToken csrfToken) {
+        return ApiResponse.ok(new CsrfTokenResponse(csrfToken.getToken(), csrfToken.getHeaderName()));
     }
 }

@@ -255,12 +255,19 @@
 
         logoutButton.addEventListener("click", async function () {
             try {
-                const csrfToken = getCookie("XSRF-TOKEN");
-                const response = await fetch("/auth/logout", {
-                    method: "POST",
-                    credentials: "same-origin",
-                    headers: csrfToken ? {"X-XSRF-TOKEN": decodeURIComponent(csrfToken)} : {}
-                });
+                let csrfToken = getCookie("XSRF-TOKEN");
+                if (!csrfToken) {
+                    csrfToken = await fetchCsrfToken();
+                }
+                let response = await requestLogout(csrfToken);
+                if (response.status === 403) {
+                    csrfToken = await fetchCsrfToken();
+                    response = await requestLogout(csrfToken);
+                }
+                if (response.status === 401) {
+                    window.location.replace("/login");
+                    return;
+                }
                 if (!response.ok) {
                     messageEl.textContent = "로그아웃 처리에 실패했습니다.";
                     return;
@@ -270,6 +277,33 @@
                 messageEl.textContent = "로그아웃 중 오류가 발생했습니다.";
             }
         });
+
+        async function requestLogout(csrfToken) {
+            const headers = csrfToken ? {"X-XSRF-TOKEN": csrfToken} : {};
+            return fetch("/auth/logout", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: headers
+            });
+        }
+
+        async function fetchCsrfToken() {
+            const response = await fetch("/auth/csrf", {
+                method: "GET",
+                credentials: "same-origin"
+            });
+            if (response.status === 401) {
+                return "";
+            }
+            if (!response.ok) {
+                return "";
+            }
+            const payload = await response.json();
+            if (!payload.success || !payload.data || !payload.data.token) {
+                return "";
+            }
+            return payload.data.token;
+        }
 
         async function loadSummary() {
             try {
@@ -311,12 +345,16 @@
 
         function getCookie(name) {
             const encodedName = name + "=";
-            const decoded = decodeURIComponent(document.cookie || "");
-            const items = decoded.split(";");
+            const items = (document.cookie || "").split(";");
             for (let i = 0; i < items.length; i += 1) {
                 const item = items[i].trim();
                 if (item.indexOf(encodedName) === 0) {
-                    return item.substring(encodedName.length);
+                    const value = item.substring(encodedName.length);
+                    try {
+                        return decodeURIComponent(value);
+                    } catch (error) {
+                        return value;
+                    }
                 }
             }
             return "";

@@ -116,6 +116,14 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void csrfEndpointRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/auth/csrf").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
     void rootPathRedirectsToLoginPage() throws Exception {
         mockMvc.perform(get("/"))
             .andExpect(status().is3xxRedirection())
@@ -163,6 +171,19 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/history").session(session))
             .andExpect(status().isOk())
             .andExpect(forwardedUrl("/history.html"));
+    }
+
+    @Test
+    void csrfEndpointReturnsTokenAfterLogin() throws Exception {
+        MvcResult loginResult = login("operator1", "testpass123!");
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/auth/csrf").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.token").value(Matchers.not(Matchers.blankOrNullString())))
+            .andExpect(jsonPath("$.data.headerName").value("X-XSRF-TOKEN"));
     }
 
     @Test
