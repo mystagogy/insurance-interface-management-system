@@ -73,8 +73,10 @@ class HistoryControllerIntegrationTest {
         when(historyService.getRecent(eq(new HistoryQueryRequest("20260401", "20260407"))))
             .thenReturn(List.of(new HistoryItemResponse(
                 "REQ-100",
+                "2026-04-07 09:10:11",
                 "자동차보험 계약 통계 조회",
-                "SUCCESS"
+                "SUCCESS",
+                null
             )));
 
         mockMvc.perform(
@@ -86,8 +88,10 @@ class HistoryControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].requestId").value("REQ-100"))
+            .andExpect(jsonPath("$.data[0].requestTime").value("2026-04-07 09:10:11"))
             .andExpect(jsonPath("$.data[0].interfaceName").value("자동차보험 계약 통계 조회"))
-            .andExpect(jsonPath("$.data[0].status").value("SUCCESS"));
+            .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
+            .andExpect(jsonPath("$.data[0].errorMessage").isEmpty());
 
         verify(historyService).getRecent(new HistoryQueryRequest("20260401", "20260407"));
     }
