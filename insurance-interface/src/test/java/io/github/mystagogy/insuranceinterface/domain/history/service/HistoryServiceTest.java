@@ -40,10 +40,12 @@ class HistoryServiceTest {
 
         ApiCallHistory successHistory = new ApiCallHistory(successApiInfo, null, "from=2024");
         ReflectionTestUtils.setField(successHistory, "id", 10L);
+        ReflectionTestUtils.setField(successHistory, "requestTime", LocalDateTime.of(2024, 4, 1, 10, 20, 30));
         successHistory.completeSuccess(200, "ok");
 
         ApiCallHistory failHistory = new ApiCallHistory(failApiInfo, null, "from=2024");
         ReflectionTestUtils.setField(failHistory, "id", 11L);
+        ReflectionTestUtils.setField(failHistory, "requestTime", LocalDateTime.of(2024, 4, 2, 11, 22, 33));
         failHistory.completeFailure(500, "error", "failed");
 
         when(apiCallHistoryRepository.findByRequestTimeGreaterThanEqualAndRequestTimeLessThanOrderByRequestTimeDesc(
@@ -56,11 +58,15 @@ class HistoryServiceTest {
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).requestId()).isEqualTo("REQ-11");
+        assertThat(responses.get(0).requestTime()).isEqualTo("2024-04-02 11:22:33");
         assertThat(responses.get(0).interfaceName()).isEqualTo("생명보험 가입 통계 조회");
         assertThat(responses.get(0).status()).isEqualTo("FAIL");
+        assertThat(responses.get(0).errorMessage()).isEqualTo("error");
         assertThat(responses.get(1).requestId()).isEqualTo("REQ-10");
+        assertThat(responses.get(1).requestTime()).isEqualTo("2024-04-01 10:20:30");
         assertThat(responses.get(1).interfaceName()).isEqualTo("자동차보험 계약 통계 조회");
         assertThat(responses.get(1).status()).isEqualTo("SUCCESS");
+        assertThat(responses.get(1).errorMessage()).isNull();
         verify(apiCallHistoryRepository).findByRequestTimeGreaterThanEqualAndRequestTimeLessThanOrderByRequestTimeDesc(
             LocalDate.of(2024, 4, 1).atStartOfDay(),
             LocalDate.of(2024, 5, 1).atStartOfDay()
@@ -72,6 +78,7 @@ class HistoryServiceTest {
         ApiInfo apiInfo = new ApiInfo("UNKNOWN_API_NAME", "provider", "http://example.com", 3000);
         ApiCallHistory history = new ApiCallHistory(apiInfo, null, "from=2024");
         ReflectionTestUtils.setField(history, "id", 12L);
+        ReflectionTestUtils.setField(history, "requestTime", LocalDateTime.of(2024, 4, 3, 12, 23, 34));
         history.completeFailure(500, "error", "failed");
 
         when(apiCallHistoryRepository.findByRequestTimeGreaterThanEqualAndRequestTimeLessThanOrderByRequestTimeDesc(any(), any()))

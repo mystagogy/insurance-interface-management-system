@@ -242,11 +242,13 @@
                 <th>요청 ID</th>
                 <th>조회 유형</th>
                 <th>상태</th>
+                <th>오류 메시지</th>
+                <th>호출 시간</th>
             </tr>
             </thead>
             <tbody id="historyTableBody">
             <tr>
-                <td colspan="3" class="empty">데이터를 불러오는 중입니다.</td>
+                <td colspan="5" class="empty">데이터를 불러오는 중입니다.</td>
             </tr>
             </tbody>
         </table>
@@ -322,13 +324,15 @@
                     "<td data-label=\"요청 ID\">" + escapeHtml(item.requestId) + "</td>",
                     "<td data-label=\"조회 유형\">" + escapeHtml(item.interfaceName || "-") + "</td>",
                     "<td data-label=\"상태\"><span class=\"status-badge " + statusClass + "\">" + escapeHtml(item.status) + "</span></td>",
+                    "<td data-label=\"오류 메시지\">" + escapeHtml(item.errorMessage || "-") + "</td>",
+                    "<td data-label=\"호출 시간\">" + escapeHtml(item.requestTime || "-") + "</td>",
                     "</tr>"
                 ].join("");
             }).join("");
         }
 
         function renderEmpty(message) {
-            tableBody.innerHTML = "<tr><td colspan=\"3\" class=\"empty\">" + escapeHtml(message) + "</td></tr>";
+            tableBody.innerHTML = "<tr><td colspan=\"5\" class=\"empty\">" + escapeHtml(message) + "</td></tr>";
         }
 
         function setDefaultDateRange() {

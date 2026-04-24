@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class HistoryService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int DEFAULT_LOOKBACK_DAYS = 6;
 
     private final ApiCallHistoryRepository apiCallHistoryRepository;
@@ -48,8 +49,10 @@ public class HistoryService {
             .stream()
             .map(history -> new HistoryItemResponse(
                 "REQ-" + history.getId(),
+                history.getRequestTime().format(DATE_TIME_FORMATTER),
                 toInterfaceName(history.getApiInfo().getApiName()),
-                history.getCallStatus().name()
+                history.getCallStatus().name(),
+                resolveErrorMessage(history.getCallStatus().name(), history.getErrorMessage())
             ))
             .toList();
     }
@@ -72,5 +75,15 @@ public class HistoryService {
             case "INDEMNITY_INSURANCE_SUBSCRIPTION" -> "실손보험 가입 통계 조회";
             default -> apiName;
         };
+    }
+
+    private String resolveErrorMessage(String status, String errorMessage) {
+        if (!"FAIL".equals(status)) {
+            return null;
+        }
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return null;
+        }
+        return errorMessage;
     }
 }

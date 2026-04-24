@@ -307,11 +307,13 @@
                 <tr>
                     <th>요청 ID</th>
                     <th>상태</th>
+                    <th>오류 메시지</th>
+                    <th>호출 시간</th>
                 </tr>
                 </thead>
                 <tbody id="historyModalBody">
                 <tr>
-                    <td colspan="2" class="empty">최근 호출 이력을 불러오는 중입니다.</td>
+                    <td colspan="4" class="empty">최근 호출 이력을 불러오는 중입니다.</td>
                 </tr>
                 </tbody>
             </table>
@@ -476,7 +478,7 @@
 
         async function openHistoryModal() {
             historyModal.classList.add("open");
-            historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오는 중입니다.</td></tr>";
+            historyModalBody.innerHTML = "<tr><td colspan=\"4\" class=\"empty\">최근 호출 이력을 불러오는 중입니다.</td></tr>";
             recentHistoryButton.disabled = true;
             try {
                 const response = await fetch("/history/recent", {
@@ -489,7 +491,7 @@
                 }
                 const payload = await response.json();
                 if (!response.ok || !payload.success || !Array.isArray(payload.data)) {
-                    historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
+                    historyModalBody.innerHTML = "<tr><td colspan=\"4\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
                     return;
                 }
                 const filtered = payload.data.filter(function (item) {
@@ -497,7 +499,7 @@
                 });
                 renderHistoryRows(filtered);
             } catch (error) {
-                historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
+                historyModalBody.innerHTML = "<tr><td colspan=\"4\" class=\"empty\">최근 호출 이력을 불러오지 못했습니다.</td></tr>";
             } finally {
                 recentHistoryButton.disabled = false;
             }
@@ -509,7 +511,7 @@
 
         function renderHistoryRows(items) {
             if (items.length === 0) {
-                historyModalBody.innerHTML = "<tr><td colspan=\"2\" class=\"empty\">자동차보험 호출 이력이 없습니다.</td></tr>";
+                historyModalBody.innerHTML = "<tr><td colspan=\"4\" class=\"empty\">자동차보험 호출 이력이 없습니다.</td></tr>";
                 return;
             }
             historyModalBody.innerHTML = items.map(function (item) {
@@ -517,6 +519,8 @@
                     "<tr>",
                     "<td>" + escapeHtml(item.requestId) + "</td>",
                     "<td>" + escapeHtml(item.status) + "</td>",
+                    "<td>" + escapeHtml(item.errorMessage || "-") + "</td>",
+                    "<td>" + escapeHtml(item.requestTime || "-") + "</td>",
                     "</tr>"
                 ].join("");
             }).join("");
