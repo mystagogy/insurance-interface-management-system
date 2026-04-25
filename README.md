@@ -8,6 +8,11 @@
 - 실패 건 재처리 이력 관리
 - 운영자용 대시보드/조회 화면 제공
 
+## 문서
+
+- 프로젝트 기획안: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
+- 아키텍처 설계도: [docs/ARCHITECTURE_DESIGN.md](docs/ARCHITECTURE_DESIGN.md)
+
 ## 1. 실행 환경
 
 ### 필수 설치
