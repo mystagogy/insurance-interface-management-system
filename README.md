@@ -12,6 +12,7 @@
 
 - 프로젝트 기획안: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
 - 아키텍처 설계도: [docs/ARCHITECTURE_DESIGN.md](docs/ARCHITECTURE_DESIGN.md)
+- 운영 화면 결과 문서(이미지 기준): [docs/SCREEN_RESULT.md](docs/SCREEN_RESULT.md)
 
 ## 1. 실행 환경
 
